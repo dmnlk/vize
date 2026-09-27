@@ -209,3 +209,56 @@ fn accessor_pair_is_writable_in_either_order() {
         ["  var first: __VizeOptionsBinding<typeof __default__, \"first\"> = undefined as any;"]
     );
 }
+
+/// The same mixin listed again after another one that shadowed its setter
+/// applies again at its later position, so the setter wins; and an exported
+/// same-file mixin (`export const shared = { ... }`) is resolved like a
+/// non-exported one.
+#[test]
+fn repeated_and_exported_mixins_apply_in_order() {
+    let script = r#"export const shared = {
+    computed: {
+        ratio: {
+            get(): string {
+                return '1'
+            },
+            set(_value: string) {},
+        },
+        label: {
+            get(): string {
+                return 'l'
+            },
+            set(_value: string) {},
+        },
+    },
+}
+
+const readonlyOverride = {
+    computed: {
+        ratio() {
+            return '1'
+        },
+        label() {
+            return 'l'
+        },
+    },
+}
+
+export default {
+    mixins: [shared, readonlyOverride, shared],
+    computed: {
+        label() {
+            return 'l'
+        },
+    },
+}
+"#;
+    let declarations = options_api_declarations(script, r#"<div>{{ ratio }} {{ label }}</div>"#);
+    assert_eq!(
+        declarations,
+        [
+            "  const label: __VizeOptionsBinding<typeof __default__, \"label\"> = undefined as any;",
+            "  var ratio: __VizeOptionsBinding<typeof __default__, \"ratio\"> = undefined as any;",
+        ]
+    );
+}

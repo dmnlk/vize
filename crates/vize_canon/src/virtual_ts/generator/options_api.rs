@@ -2,8 +2,8 @@
 
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{
-    Argument, CallExpression, ExportDefaultDeclarationKind, Expression, ObjectExpression,
-    ObjectPropertyKind, Program, PropertyKey, PropertyKind, Statement,
+    Argument, CallExpression, Declaration, ExportDefaultDeclarationKind, Expression,
+    ObjectExpression, ObjectPropertyKind, Program, PropertyKey, PropertyKind, Statement,
 };
 use oxc_parser::Parser;
 use oxc_span::{GetSpan, SourceType};
@@ -464,6 +464,9 @@ fn resolved_computed_writability<'a>(
     seen: &mut FxHashSet<u32>,
 ) -> FxHashMap<String, bool> {
     let mut resolved = FxHashMap::default();
+    // `seen` holds the objects on the current resolution path: a cycle stops,
+    // but the same mixin listed twice (or reached through two chains) is
+    // applied at each position, as Vue does.
     if !seen.insert(options.span.start) {
         return resolved;
     }
@@ -487,6 +490,7 @@ fn resolved_computed_writability<'a>(
     for (name, writable) in local_computed_writability(options) {
         resolved.insert(name, writable);
     }
+    seen.remove(&options.span.start);
     resolved
 }
 
@@ -522,15 +526,24 @@ fn local_computed_writability<'a>(options: &'a ObjectExpression<'a>) -> Vec<(Str
     local
 }
 
-/// Module-scope `const name = { ... }` objects, the same-file targets a
-/// `mixins` / `extends` entry can name.
+/// Module-scope `const name = { ... }` objects, exported or not, the
+/// same-file targets a `mixins` / `extends` entry can name.
 fn collect_object_expression_values<'a>(
     program: &'a Program<'a>,
 ) -> FxHashMap<&'a str, &'a ObjectExpression<'a>> {
     let mut bindings = FxHashMap::default();
     for statement in program.body.iter() {
-        let Statement::VariableDeclaration(declaration) = statement else {
-            continue;
+        let declaration = match statement {
+            Statement::VariableDeclaration(declaration) => declaration,
+            Statement::ExportNamedDeclaration(export) => {
+                let Some(Declaration::VariableDeclaration(declaration)) =
+                    export.declaration.as_ref()
+                else {
+                    continue;
+                };
+                declaration
+            }
+            _ => continue,
         };
         for declarator in declaration.declarations.iter() {
             let oxc_ast::ast::BindingPattern::BindingIdentifier(id) = &declarator.id else {
