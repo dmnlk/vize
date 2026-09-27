@@ -13,6 +13,8 @@ use super::{
     option_object_property, property_key_name,
 };
 
+mod setters;
+
 /// Names of `computed` members that declare a setter.
 ///
 /// Vue exposes a `{ get, set }` computed (or a `get`/`set` accessor pair) as a
@@ -28,7 +30,9 @@ pub(super) fn writable_computed_names<'a>(
 ) -> FxHashSet<String> {
     let object_bindings = collect_object_expression_values(program);
     let mut seen = FxHashSet::default();
-    let resolved = resolved_computed_writability(options, &object_bindings, &mut seen);
+    let undefined_is_bound = setters::has_module_undefined_binding(program);
+    let resolved =
+        resolved_computed_writability(options, &object_bindings, &mut seen, undefined_is_bound);
     // Vue reads a template name from `data`, then `props`, and only then from
     // the context that exposes computed members, so a computed sharing a
     // prop's name never provides the value: the prop does, and it is
@@ -113,21 +117,6 @@ fn inherited_options_objects<'a>(
     sources
 }
 
-/// Whether a computed descriptor's `set` entry can be called: a function or
-/// method, or a value the script computes (a reference, a call) that only the
-/// checker can judge. A statically absent setter (`set: undefined`, `null`,
-/// a literal) leaves the computed read-only, as Vue ignores it.
-fn is_usable_setter(value: &Expression<'_>) -> bool {
-    !matches!(
-        value,
-        Expression::NullLiteral(_)
-            | Expression::BooleanLiteral(_)
-            | Expression::NumericLiteral(_)
-            | Expression::StringLiteral(_)
-            | Expression::TemplateLiteral(_)
-    ) && !matches!(value, Expression::Identifier(identifier) if identifier.name == "undefined")
-}
-
 /// The array an option holds, looking through parentheses and TypeScript
 /// wrappers such as `(['a'] as const)`, like the object-resolution helpers.
 fn array_expression_from_expression<'a>(
@@ -160,6 +149,7 @@ fn resolved_computed_writability<'a>(
     options: &'a ObjectExpression<'a>,
     object_bindings: &FxHashMap<&'a str, &'a ObjectExpression<'a>>,
     seen: &mut FxHashSet<u32>,
+    undefined_is_bound: bool,
 ) -> FxHashMap<String, bool> {
     let mut resolved = FxHashMap::default();
     // `seen` holds the objects on the current resolution path: a cycle stops,
@@ -169,9 +159,14 @@ fn resolved_computed_writability<'a>(
         return resolved;
     }
     for source in inherited_options_objects(options, object_bindings) {
-        resolved.extend(resolved_computed_writability(source, object_bindings, seen));
+        resolved.extend(resolved_computed_writability(
+            source,
+            object_bindings,
+            seen,
+            undefined_is_bound,
+        ));
     }
-    for (name, writable) in local_computed_writability(options) {
+    for (name, writable) in local_computed_writability(options, undefined_is_bound) {
         resolved.insert(name, writable);
     }
     seen.remove(&options.span.start);
@@ -181,7 +176,10 @@ fn resolved_computed_writability<'a>(
 /// The `computed` members an options object declares itself, with whether
 /// each is writable. A `get`/`set` accessor pair declares the name twice, so
 /// the entries are folded per name: any setter makes the name writable.
-fn local_computed_writability<'a>(options: &'a ObjectExpression<'a>) -> Vec<(String, bool)> {
+fn local_computed_writability<'a>(
+    options: &'a ObjectExpression<'a>,
+    undefined_is_bound: bool,
+) -> Vec<(String, bool)> {
     let mut local: Vec<(String, bool)> = Vec::new();
     let Some(computed) = option_object_property(options, "computed") else {
         return local;
@@ -201,7 +199,7 @@ fn local_computed_writability<'a>(options: &'a ObjectExpression<'a>) -> Vec<(Str
             PropertyKind::Get => false,
             PropertyKind::Init => object_expression_from_expression(&property.value)
                 .and_then(|descriptor| option_expression_property(descriptor, "set"))
-                .is_some_and(is_usable_setter),
+                .is_some_and(|value| setters::is_usable_setter(value, undefined_is_bound)),
         };
         match local.iter_mut().find(|(existing, _)| existing == name) {
             Some((_, existing_writable)) => *existing_writable |= writable,

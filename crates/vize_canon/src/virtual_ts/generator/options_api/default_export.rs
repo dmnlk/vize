@@ -145,6 +145,7 @@ fn default_export_targets(script: &str, program: &Program<'_>) -> DefaultExportT
 #[cfg(test)]
 mod tests {
     use super::analyze_options_api_script;
+    use vize_carton::{FxHashSet, String};
 
     #[test]
     fn shared_options_facts_preserve_export_and_repeated_mixin_precedence() {
@@ -164,10 +165,10 @@ export default {
         assert!(facts.default_export.class.is_none());
         assert!(facts.default_export.expr.is_none());
         assert!(facts.has_unresolved_extends);
-        assert_eq!(facts.writable_computed.len(), 2);
-        assert!(facts.writable_computed.contains("ratio"));
-        assert!(facts.writable_computed.contains("own"));
-        assert!(!facts.writable_computed.contains("local"));
+        assert_eq!(
+            facts.writable_computed,
+            FxHashSet::from_iter([String::from("own"), String::from("ratio")])
+        );
     }
 
     #[test]
@@ -181,7 +182,10 @@ export default {
         assert!(options_only.default_export.object.is_none());
         assert!(options_only.default_export.class.is_none());
         assert!(options_only.default_export.expr.is_none());
-        assert!(options_only.writable_computed.contains("ratio"));
+        assert_eq!(
+            options_only.writable_computed,
+            FxHashSet::from_iter([String::from("ratio")])
+        );
         assert!(options_only.has_unresolved_extends);
     }
 
@@ -192,7 +196,10 @@ export default {
                 "{keyword} {{ extends: ImportedBase, computed: {{ ratio: {{ set(v) {{}} }} }} }}"
             );
             let facts = analyze_options_api_script(&script, true, true);
-            assert!(facts.writable_computed.contains("ratio"));
+            assert_eq!(
+                facts.writable_computed,
+                FxHashSet::from_iter([String::from("ratio")])
+            );
             // These two existing helpers keep their original literal guards.
             assert!(facts.default_export.object.is_none());
             assert!(!facts.has_unresolved_extends);

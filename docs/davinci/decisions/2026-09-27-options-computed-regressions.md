@@ -25,6 +25,29 @@ The owner's later `5e0048c0` computed/prop-collision fix is preserved in a
 separate private compatibility commit: its resolution body and regression test
 remain byte-exact, with only the duplicate parse entry replaced by shared inputs.
 
+Preserve the actual later owner `13a694c1` ancestry, wrapped `props`/`mixins`
+arrays, authored/camelCase prop spellings and statically absent setter handling.
+Move its complete wrapped-options test body unchanged into an ordinary child
+module so the parent stays below 350 lines. Setter classification looks through
+OXC's erased parenthesis/TypeScript wrappers and distinguishes the builtin
+`undefined` from direct or block-hoisted module bindings using the already-parsed AST. Unrelated local
+function bindings do not shadow module-level descriptors; authored references
+and calls otherwise retain the existing checker-dependent behavior.
+
+[Vue's setter dispatch](https://github.com/vuejs/core/blob/v3.5.30/packages/runtime-core/src/componentOptions.ts#L639)
+requires a callable value. Local Vue 3.6.0-beta.10 and TypeScript 6.0.3 execution
+confirmed that wrapped `null`/builtin `undefined` warn and never invoke a setter,
+while a callable module binding named `undefined` is invoked. A separate strict
+TypeScript module accepted that binding without diagnostics. These observations
+establish the intended semantics, not candidate Rust execution.
+
+The second registered corpus, `options-api-computed-setters`, retains the
+owner's wrapped-options input and adds wrapped absent/callable setters, an
+unrelated local binding and direct/block-hoisted callable module shadowing. Its source-built Rust
+virtual-TS witness compares complete declaration vectors including mutability.
+Fresh Actions must execute these oracles. No CLI diagnostic text/position is
+guessed, and this corpus adds zero native comparisons or L2/L3 sweep baselines.
+
 The authored `tests/fixtures/typechecker/options-api-writable-computed` case
 registers the existing SFC, compiler options, provenance and complete diagnostic
 reference through the original Rust CLI integration test. A writable setter

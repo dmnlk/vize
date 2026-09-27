@@ -310,4 +310,5 @@ export default {
     );
 }
 
+mod setter_fixtures;
 mod wrapped_options;
