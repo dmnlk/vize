@@ -1,5 +1,7 @@
 use crate::virtual_ts::{VirtualTsOptions, generate_virtual_ts_with_offsets_options_api};
 
+/// The `const` / `var` declarations of the Options API template bindings the
+/// generator emits for `script` and `template`, in emission order.
 fn options_api_declarations(script: &str, template: &str) -> Vec<std::string::String> {
     let allocator = vize_carton::Allocator::new();
     let (root, _) = vize_armature::parse(&allocator, template);
@@ -136,5 +138,74 @@ export default defineComponent({
             "  var ratio: __VizeOptionsBinding<typeof __default__, \"ratio\"> = undefined as any;",
             "  var title: __VizeOptionsBinding<typeof __default__, \"title\"> = undefined as any;",
         ]
+    );
+}
+
+/// Vue merges `computed` with the component's own declaration winning over
+/// `mixins`, and later mixins over earlier ones (and over `extends`). A local
+/// getter-only computed therefore shadows an inherited writable one, and a
+/// later mixin's getter-only computed shadows an earlier mixin's setter.
+#[test]
+fn local_and_later_declarations_shadow_inherited_writability() {
+    let script = r#"const writableBase = {
+    computed: {
+        ratio: {
+            get(): string {
+                return '1'
+            },
+            set(_value: string) {},
+        },
+        title: {
+            get(): string {
+                return 't'
+            },
+            set(_value: string) {},
+        },
+    },
+}
+
+const readonlyOverride = {
+    computed: {
+        title() {
+            return 't'
+        },
+    },
+}
+
+export default {
+    mixins: [writableBase, readonlyOverride],
+    computed: {
+        ratio() {
+            return '1'
+        },
+    },
+}
+"#;
+    let declarations = options_api_declarations(script, r#"<div>{{ ratio }} {{ title }}</div>"#);
+    assert_eq!(
+        declarations,
+        [
+            "  const ratio: __VizeOptionsBinding<typeof __default__, \"ratio\"> = undefined as any;",
+            "  const title: __VizeOptionsBinding<typeof __default__, \"title\"> = undefined as any;",
+        ]
+    );
+}
+
+/// A `set` accessor before its `get` accessor is the same writable pair.
+#[test]
+fn accessor_pair_is_writable_in_either_order() {
+    let script = r#"export default {
+    computed: {
+        set first(_value: string) {},
+        get first() {
+            return 'a'
+        },
+    },
+}
+"#;
+    let declarations = options_api_declarations(script, r#"<div @click="first = 'b'" />"#);
+    assert_eq!(
+        declarations,
+        ["  var first: __VizeOptionsBinding<typeof __default__, \"first\"> = undefined as any;"]
     );
 }

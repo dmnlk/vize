@@ -71,6 +71,8 @@ fn check_options_api_writable_computed_assignment_passes() {
     let _ = std::fs::remove_dir_all(&project_root);
 }
 
+/// A throwaway project under `target/` with the fixture component and a
+/// symlink to the workspace `node_modules` (for `vue`).
 fn create_cli_project() -> PathBuf {
     let project_root = workspace_root()
         .join("target")
@@ -134,6 +136,7 @@ export default defineComponent({
     project_root
 }
 
+/// The repository root, two levels above this crate.
 fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -142,6 +145,8 @@ fn workspace_root() -> PathBuf {
         .to_path_buf()
 }
 
+/// Expose the workspace `node_modules` to the fixture project so `vue`
+/// resolves without an install.
 fn link_workspace_node_modules(project_root: &Path) {
     let source = workspace_root().join("node_modules");
     if source.exists() {
@@ -149,10 +154,13 @@ fn link_workspace_node_modules(project_root: &Path) {
     }
 }
 
+/// The Corsa binary to check with: `CORSA_PATH` when set, else the workspace
+/// `tsgo` shim. Returned absolute, as the CLI runs from the fixture project.
 fn resolve_test_corsa_path() -> Option<String> {
     if let Some(path) = std::env::var_os("CORSA_PATH") {
         let path = PathBuf::from(path);
         if path.exists() {
+            let path = path.canonicalize().unwrap_or(path);
             return Some(path.display().to_string());
         }
     }
@@ -163,6 +171,7 @@ fn resolve_test_corsa_path() -> Option<String> {
         .map(|candidate| candidate.display().to_string())
 }
 
+/// Create a directory symlink on either platform.
 fn symlink_path(source: &Path, target: &Path) -> std::io::Result<()> {
     #[cfg(unix)]
     {

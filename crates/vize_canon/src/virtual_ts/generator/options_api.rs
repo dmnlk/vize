@@ -433,61 +433,44 @@ pub(super) fn safe_identifier(name: &str) -> String {
 /// Vue exposes a `{ get, set }` computed (or a `get`/`set` accessor pair) as a
 /// writable instance property, so a template assignment such as
 /// `@input="ratio = $event"` is valid where a getter-only computed stays
-/// read-only. Same-file `mixins` / `extends` objects contribute their members
-/// the same way the template-binding collector reads them.
+/// read-only. Same-file `extends` / `mixins` objects contribute their members
+/// with Vue's option precedence: a later source replaces an earlier one, and
+/// the component's own declaration wins, so a local getter-only computed
+/// shadows an inherited writable one.
 pub(super) fn writable_computed_names(script: &str) -> FxHashSet<String> {
-    let mut names = FxHashSet::default();
     let allocator = Allocator::default();
     let parsed = Parser::new(&allocator, script, SourceType::ts()).parse();
     if parsed.panicked {
-        return names;
+        return FxHashSet::default();
     }
     let Some(options) = component_options_from_program(&parsed.program) else {
-        return names;
+        return FxHashSet::default();
     };
     let object_bindings = collect_object_expression_values(&parsed.program);
     let mut seen = FxHashSet::default();
-    collect_writable_computed_names(options, &object_bindings, &mut seen, &mut names);
-    names
+    resolved_computed_writability(options, &object_bindings, &mut seen)
+        .into_iter()
+        .filter_map(|(name, writable)| writable.then_some(name))
+        .collect()
 }
 
-fn collect_writable_computed_names<'a>(
+/// Every `computed` name an options object resolves to, with whether it is
+/// writable, after applying `extends`, then each `mixins` entry in order, then
+/// the object's own `computed`. Each later source replaces the entry of an
+/// earlier one, which is how Vue merges the option.
+fn resolved_computed_writability<'a>(
     options: &'a ObjectExpression<'a>,
     object_bindings: &FxHashMap<&'a str, &'a ObjectExpression<'a>>,
     seen: &mut FxHashSet<u32>,
-    names: &mut FxHashSet<String>,
-) {
+) -> FxHashMap<String, bool> {
+    let mut resolved = FxHashMap::default();
     if !seen.insert(options.span.start) {
-        return;
-    }
-    if let Some(computed) = option_object_property(options, "computed") {
-        for property in computed.properties.iter() {
-            let ObjectPropertyKind::ObjectProperty(property) = property else {
-                continue;
-            };
-            if property.computed {
-                continue;
-            }
-            let Some(name) = property_key_name(&property.key) else {
-                continue;
-            };
-            let writable = match property.kind {
-                PropertyKind::Set => true,
-                PropertyKind::Get => false,
-                PropertyKind::Init => object_expression_from_expression(&property.value)
-                    .is_some_and(|descriptor| {
-                        option_expression_property(descriptor, "set").is_some()
-                    }),
-            };
-            if writable {
-                names.insert(String::from(name));
-            }
-        }
+        return resolved;
     }
     if let Some(extends) = option_expression_property(options, "extends")
         && let Some(target) = resolve_options_object(extends, object_bindings)
     {
-        collect_writable_computed_names(target, object_bindings, seen, names);
+        resolved.extend(resolved_computed_writability(target, object_bindings, seen));
     }
     if let Some(Expression::ArrayExpression(mixins)) = option_expression_property(options, "mixins")
     {
@@ -497,10 +480,46 @@ fn collect_writable_computed_names<'a>(
                 continue;
             };
             if let Some(target) = resolve_options_object(expression, object_bindings) {
-                collect_writable_computed_names(target, object_bindings, seen, names);
+                resolved.extend(resolved_computed_writability(target, object_bindings, seen));
             }
         }
     }
+    for (name, writable) in local_computed_writability(options) {
+        resolved.insert(name, writable);
+    }
+    resolved
+}
+
+/// The `computed` members an options object declares itself, with whether
+/// each is writable. A `get`/`set` accessor pair declares the name twice, so
+/// the entries are folded per name: any setter makes the name writable.
+fn local_computed_writability<'a>(options: &'a ObjectExpression<'a>) -> Vec<(String, bool)> {
+    let mut local: Vec<(String, bool)> = Vec::new();
+    let Some(computed) = option_object_property(options, "computed") else {
+        return local;
+    };
+    for property in computed.properties.iter() {
+        let ObjectPropertyKind::ObjectProperty(property) = property else {
+            continue;
+        };
+        if property.computed {
+            continue;
+        }
+        let Some(name) = property_key_name(&property.key) else {
+            continue;
+        };
+        let writable = match property.kind {
+            PropertyKind::Set => true,
+            PropertyKind::Get => false,
+            PropertyKind::Init => object_expression_from_expression(&property.value)
+                .is_some_and(|descriptor| option_expression_property(descriptor, "set").is_some()),
+        };
+        match local.iter_mut().find(|(existing, _)| existing == name) {
+            Some((_, existing_writable)) => *existing_writable |= writable,
+            None => local.push((String::from(name), writable)),
+        }
+    }
+    local
 }
 
 /// Module-scope `const name = { ... }` objects, the same-file targets a
@@ -528,6 +547,9 @@ fn collect_object_expression_values<'a>(
     bindings
 }
 
+/// The options object an `extends` / `mixins` entry names: an inline object,
+/// a same-file `const` bound to one, or a `defineComponent({ ... })` call
+/// around one.
 fn resolve_options_object<'a>(
     expression: &'a Expression<'a>,
     object_bindings: &FxHashMap<&'a str, &'a ObjectExpression<'a>>,
