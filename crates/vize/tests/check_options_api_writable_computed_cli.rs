@@ -19,6 +19,7 @@ fn check_options_api_writable_computed_assignment_passes() {
     };
     let project_root = create_cli_project();
     if !project_root.join("node_modules/vue").exists() {
+        eprintln!("skipping writable computed CLI fixture: workspace Vue package missing");
         let _ = std::fs::remove_dir_all(&project_root);
         return;
     }
@@ -44,29 +45,32 @@ fn check_options_api_writable_computed_assignment_passes() {
     });
     let diagnostics = json["files"]
         .as_array()
-        .into_iter()
-        .flatten()
-        .flat_map(|file| file["diagnostics"].as_array().cloned().unwrap_or_default())
-        .filter_map(|diagnostic| diagnostic.as_str().map(str::to_owned))
+        .expect("check JSON must contain files")
+        .iter()
+        .flat_map(|file| {
+            file["diagnostics"]
+                .as_array()
+                .expect("each file must contain diagnostics")
+        })
+        .map(|diagnostic| {
+            diagnostic
+                .as_str()
+                .expect("diagnostics must be strings")
+                .to_owned()
+        })
         .collect::<Vec<_>>();
 
-    // The getter-only computed stays read-only: exactly that assignment is
-    // reported, and the writable computed is not.
+    // The complete oracle keeps the getter-only assignment, its source
+    // position and message, while rejecting any writable-computed error.
+    let expected: Vec<String> = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/typechecker/options-api-writable-computed/expected-diagnostics.json"
+    ))
+    .unwrap();
     assert_eq!(
-        diagnostics.len(),
-        1,
-        "only the getter-only computed assignment may be reported; got {diagnostics:?}\nstdout:\n{stdout}\nstderr:\n{stderr}"
+        diagnostics, expected,
+        "stdout:\n{stdout}\nstderr:\n{stderr}"
     );
-    assert!(
-        diagnostics[0].contains("readonlyLabel") && diagnostics[0].contains("[TS2588]"),
-        "the getter-only computed assignment must still be reported; got {diagnostics:?}\nstdout:\n{stdout}\nstderr:\n{stderr}"
-    );
-    assert!(
-        !diagnostics
-            .iter()
-            .any(|diagnostic| diagnostic.contains("'ratio'")),
-        "the writable computed assignment must not be reported; got {diagnostics:?}\nstdout:\n{stdout}\nstderr:\n{stderr}"
-    );
+    assert_eq!(output.status.code(), Some(1));
 
     let _ = std::fs::remove_dir_all(&project_root);
 }
@@ -86,51 +90,16 @@ fn create_cli_project() -> PathBuf {
     link_workspace_node_modules(&project_root);
     std::fs::write(
         project_root.join("tsconfig.json"),
-        r#"{
-  "compilerOptions": {
-    "strict": true,
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "noEmit": true
-  },
-  "include": ["src/**/*"]
-}"#,
+        include_str!(
+            "../../../tests/fixtures/typechecker/options-api-writable-computed/tsconfig.json"
+        ),
     )
     .unwrap();
     std::fs::write(
         project_root.join("src/WritableComputed.vue"),
-        r#"<template>
-  <div>
-    <input :value="ratio" @input="ratio = ($event.target as HTMLInputElement).value" />
-    <button @click="readonlyLabel = 'x'">{{ readonlyLabel }}</button>
-  </div>
-</template>
-
-<script lang="ts">
-import { defineComponent } from 'vue'
-
-export default defineComponent({
-  name: 'WritableComputed',
-  data() {
-    return { store: { ratio: '1' } }
-  },
-  computed: {
-    ratio: {
-      get(): string {
-        return this.store.ratio
-      },
-      set(value: string) {
-        this.store.ratio = value
-      },
-    },
-    readonlyLabel(): string {
-      return this.store.ratio
-    },
-  },
-})
-</script>
-"#,
+        include_str!(
+            "../../../tests/fixtures/typechecker/options-api-writable-computed/WritableComputed.vue"
+        ),
     )
     .unwrap();
     project_root

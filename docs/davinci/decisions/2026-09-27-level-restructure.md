@@ -333,6 +333,8 @@ remain separate requirements before declaring full T1 coverage.
 
 ## Shared differential fixtures
 
+[Options API computed regressions](./2026-09-27-options-computed-regressions.md) record the explicitly registered typechecker fixture for #6879.
+
 Tracked in [#6891](https://github.com/ubugeeei-prod/vize/issues/6891).
 The [first formatter path](./2026-09-27-differential-formatter.md) records the
 two exact regression fixtures, source-build receipt, raw comparison, deliberate
