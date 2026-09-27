@@ -1,9 +1,48 @@
 //! Default-export span classification for Options API virtual TypeScript.
 
 use oxc_allocator::Allocator;
-use oxc_ast::ast::{ExportDefaultDeclarationKind, Statement};
+use oxc_ast::ast::{ExportDefaultDeclarationKind, Program, Statement};
 use oxc_parser::Parser;
 use oxc_span::{GetSpan, SourceType};
+use vize_carton::{FxHashSet, String};
+
+use super::{
+    component_options_from_program, computed::writable_computed_names, has_unresolved_extends,
+};
+
+/// Owned results shared by default-export rewriting and Options API bindings.
+#[derive(Default)]
+pub(in crate::virtual_ts::generator) struct OptionsApiScriptFacts {
+    pub default_export: DefaultExportTargets,
+    pub writable_computed: FxHashSet<String>,
+    pub has_unresolved_extends: bool,
+}
+
+/// Derive the Options API facts from the existing default-export parse.
+pub(in crate::virtual_ts::generator) fn analyze_options_api_script(
+    script: &str,
+    classify_default_export: bool,
+    options_api: bool,
+) -> OptionsApiScriptFacts {
+    let mut facts = OptionsApiScriptFacts::default();
+    // Preserve the existing default-export-only no-export fast path.
+    if !options_api && !script.contains("export default") {
+        return facts;
+    }
+    let allocator = Allocator::default();
+    let parsed = Parser::new(&allocator, script, SourceType::ts()).parse();
+    if parsed.panicked {
+        return facts;
+    }
+    if classify_default_export {
+        facts.default_export = default_export_targets(script, &parsed.program);
+    }
+    if options_api && let Some(options) = component_options_from_program(&parsed.program) {
+        facts.writable_computed = writable_computed_names(&parsed.program, options);
+        facts.has_unresolved_extends = has_unresolved_extends(script, &parsed.program, options);
+    }
+    facts
+}
 
 /// Byte offsets locating the rewriteable shape of a `<script>` default export.
 ///
@@ -46,22 +85,20 @@ pub(in crate::virtual_ts::generator) struct DefaultExportTargets {
     pub expr: Option<(usize, usize, usize)>,
 }
 
-/// Classify a `<script>` default export in a single parse. Parsing once keeps
-/// the virtual-TS hot path free of a second full OXC parse per plain-`<script>`
-/// component.
+/// The rewrite tests use the same parse and classification as the generator.
+#[cfg(test)]
 pub(in crate::virtual_ts::generator) fn find_default_export_targets(
     script: &str,
 ) -> DefaultExportTargets {
+    analyze_options_api_script(script, true, false).default_export
+}
+
+fn default_export_targets(script: &str, program: &Program<'_>) -> DefaultExportTargets {
     let mut targets = DefaultExportTargets::default();
     if !script.contains("export default") {
         return targets;
     }
-    let allocator = Allocator::default();
-    let parsed = Parser::new(&allocator, script, SourceType::ts()).parse();
-    if parsed.panicked {
-        return targets;
-    }
-    for statement in parsed.program.body.iter() {
+    for statement in program.body.iter() {
         let Statement::ExportDefaultDeclaration(export) = statement else {
             continue;
         };
@@ -103,4 +140,48 @@ pub(in crate::virtual_ts::generator) fn find_default_export_targets(
         break;
     }
     targets
+}
+
+#[cfg(test)]
+mod tests {
+    use super::analyze_options_api_script;
+
+    #[test]
+    fn shared_options_facts_preserve_export_and_repeated_mixin_precedence() {
+        let script = r#"
+export const shared = { computed: { ratio: { get() { return 1 }, set(value) {} } } };
+const readonly = { computed: { ratio() { return 2 } } };
+export default {
+    extends: ImportedBase,
+    mixins: [shared, readonly, shared],
+    computed: { own: { get() { return 3 }, set(value) {} }, local() { return 4 } }
+}
+"#;
+        let facts = analyze_options_api_script(script, true, true);
+        let (export_start, start, end) = facts.default_export.object.unwrap();
+        assert_eq!(&script[export_start..start], "export default ");
+        assert_eq!(&script[start..end], script[start..].trim_end());
+        assert!(facts.default_export.class.is_none());
+        assert!(facts.default_export.expr.is_none());
+        assert!(facts.has_unresolved_extends);
+        assert_eq!(facts.writable_computed.len(), 2);
+        assert!(facts.writable_computed.contains("ratio"));
+        assert!(facts.writable_computed.contains("own"));
+        assert!(!facts.writable_computed.contains("local"));
+    }
+
+    #[test]
+    fn rewrite_and_options_binding_gates_remain_independent() {
+        let script = "export default { extends: ImportedBase, computed: { ratio: { set(v) {} } } }";
+        let rewrite_only = analyze_options_api_script(script, true, false);
+        assert!(rewrite_only.default_export.object.is_some());
+        assert!(rewrite_only.writable_computed.is_empty());
+        assert!(!rewrite_only.has_unresolved_extends);
+        let options_only = analyze_options_api_script(script, false, true);
+        assert!(options_only.default_export.object.is_none());
+        assert!(options_only.default_export.class.is_none());
+        assert!(options_only.default_export.expr.is_none());
+        assert!(options_only.writable_computed.contains("ratio"));
+        assert!(options_only.has_unresolved_extends);
+    }
 }

@@ -9,6 +9,18 @@ modules in a move-only commit. The parent returns below 350 lines; the moved
 bodies preserve behavior. Keep the already-fixed recursion-path removal rather
 than bypassing the unresolved review thread.
 
+The private parse-sharing candidate derives default-export spans, writable
+computed names and unresolved-extends status from one existing OXC script parse
+and the same parsed Options object. Binding emission borrows those owned facts;
+it adds no pipeline stage or serialization. Options facts are collected only
+under the existing Options API template-binding gate, and setup-only rewrite
+classification remains disabled. Existing rewrite guards, merge precedence,
+repeated mixins, recursion-path removal and authored emission/mapping bodies are
+preserved. The runtime-props helper's existing separate parse is outside this
+small change. Two joint-result tests cover export spans, repeated/exported mixin
+precedence, unresolved extends and independent rewrite/binding gates. Source
+compilation and exact diagnostic execution remain pending existing PR Actions.
+
 The authored `tests/fixtures/typechecker/options-api-writable-computed` case
 registers the existing SFC, compiler options, provenance and complete diagnostic
 reference through the original Rust CLI integration test. A writable setter

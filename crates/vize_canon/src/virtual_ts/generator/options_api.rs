@@ -1,12 +1,9 @@
 //! Options API template-binding emission for the virtual TypeScript generator.
 
-use oxc_allocator::Allocator;
 use oxc_ast::ast::{
     Argument, CallExpression, ExportDefaultDeclarationKind, Expression, ObjectExpression,
     ObjectPropertyKind, Program, PropertyKey, Statement,
 };
-use oxc_parser::Parser;
-use oxc_span::SourceType;
 use vize_croquis::Croquis;
 use vize_croquis::facts::used_component_name_list;
 
@@ -17,16 +14,17 @@ mod computed;
 mod default_export;
 mod variables;
 
-use computed::writable_computed_names;
+#[cfg(test)]
 pub(super) use default_export::find_default_export_targets;
+pub(super) use default_export::{OptionsApiScriptFacts, analyze_options_api_script};
 pub(super) use variables::generate_options_api_variables;
 
 fn unresolved_extends_template_names(
     summary: &Croquis,
     configured_globals: &FxHashSet<&str>,
-    script: Option<&str>,
+    has_unresolved_extends: bool,
 ) -> Vec<String> {
-    if !script.is_some_and(has_unresolved_extends) {
+    if !has_unresolved_extends {
         return Vec::new();
     }
 
@@ -77,25 +75,20 @@ fn unresolved_extends_template_names(
     names
 }
 
-fn has_unresolved_extends(script: &str) -> bool {
+fn has_unresolved_extends<'a>(
+    script: &str,
+    program: &'a Program<'a>,
+    options: &'a ObjectExpression<'a>,
+) -> bool {
     if !script.contains("extends") || !script.contains("export default") {
         return false;
     }
 
-    let allocator = Allocator::default();
-    let parsed = Parser::new(&allocator, script, SourceType::ts()).parse();
-    if parsed.panicked {
-        return false;
-    }
-
-    let Some(options) = component_options_from_program(&parsed.program) else {
-        return false;
-    };
     let Some(extends) = option_expression_property(options, "extends") else {
         return false;
     };
 
-    let object_bindings = collect_object_expression_bindings(&parsed.program);
+    let object_bindings = collect_object_expression_bindings(program);
     !is_resolved_options_target(extends, &object_bindings)
 }
 

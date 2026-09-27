@@ -1,16 +1,13 @@
 //! Resolve the writability of local and inherited Options API computed members.
 
-use oxc_allocator::Allocator;
 use oxc_ast::ast::{
     Declaration, Expression, ObjectExpression, ObjectPropertyKind, Program, PropertyKind, Statement,
 };
-use oxc_parser::Parser;
-use oxc_span::SourceType;
 use vize_carton::{FxHashMap, FxHashSet, String};
 
 use super::{
-    component_options_from_call, component_options_from_program, object_expression_from_expression,
-    option_expression_property, option_object_property, property_key_name,
+    component_options_from_call, object_expression_from_expression, option_expression_property,
+    option_object_property, property_key_name,
 };
 
 /// Names of `computed` members that declare a setter.
@@ -22,16 +19,11 @@ use super::{
 /// with Vue's option precedence: a later source replaces an earlier one, and
 /// the component's own declaration wins, so a local getter-only computed
 /// shadows an inherited writable one.
-pub(super) fn writable_computed_names(script: &str) -> FxHashSet<String> {
-    let allocator = Allocator::default();
-    let parsed = Parser::new(&allocator, script, SourceType::ts()).parse();
-    if parsed.panicked {
-        return FxHashSet::default();
-    }
-    let Some(options) = component_options_from_program(&parsed.program) else {
-        return FxHashSet::default();
-    };
-    let object_bindings = collect_object_expression_values(&parsed.program);
+pub(super) fn writable_computed_names<'a>(
+    program: &'a Program<'a>,
+    options: &'a ObjectExpression<'a>,
+) -> FxHashSet<String> {
+    let object_bindings = collect_object_expression_values(program);
     let mut seen = FxHashSet::default();
     resolved_computed_writability(options, &object_bindings, &mut seen)
         .into_iter()
