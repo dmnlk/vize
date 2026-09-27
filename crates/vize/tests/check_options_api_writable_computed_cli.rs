@@ -17,12 +17,15 @@ fn check_options_api_writable_computed_assignment_passes() {
     let Some(corsa_path) = corsa_requirement::required_or_skip(resolve_test_corsa_path()) else {
         return;
     };
-    let project_root = create_cli_project();
-    if !project_root.join("node_modules/vue").exists() {
+    let Some(vue_package) = workspace_vue_package() else {
+        assert!(
+            std::env::var_os("VIZE_TEST_REQUIRE_TSGO").is_none(),
+            "VIZE_TEST_REQUIRE_TSGO requires a workspace Vue package for the computed CLI fixture"
+        );
         eprintln!("skipping writable computed CLI fixture: workspace Vue package missing");
-        let _ = std::fs::remove_dir_all(&project_root);
         return;
-    }
+    };
+    let project_root = create_cli_project(&vue_package);
 
     let output = Command::new(env!("CARGO_BIN_EXE_vize"))
         .current_dir(&project_root)
@@ -77,7 +80,7 @@ fn check_options_api_writable_computed_assignment_passes() {
 
 /// A throwaway project under `target/` with the fixture component and a
 /// symlink to the workspace `node_modules` (for `vue`).
-fn create_cli_project() -> PathBuf {
+fn create_cli_project(vue_package: &Path) -> PathBuf {
     let project_root = workspace_root()
         .join("target")
         .join("vize-tests")
@@ -87,7 +90,7 @@ fn create_cli_project() -> PathBuf {
         ));
     let _ = std::fs::remove_dir_all(&project_root);
     std::fs::create_dir_all(project_root.join("src")).unwrap();
-    link_workspace_node_modules(&project_root);
+    link_workspace_vue(&project_root, vue_package).unwrap();
     std::fs::write(
         project_root.join("tsconfig.json"),
         include_str!(
@@ -114,13 +117,39 @@ fn workspace_root() -> PathBuf {
         .to_path_buf()
 }
 
-/// Expose the workspace `node_modules` to the fixture project so `vue`
-/// resolves without an install.
-fn link_workspace_node_modules(project_root: &Path) {
-    let source = workspace_root().join("node_modules");
-    if source.exists() {
-        symlink_path(&source, &project_root.join("node_modules")).unwrap();
+/// Locate Vue where this workspace actually declares it, including the tests
+/// package. A dependency-free local run can defer; required CI cannot.
+fn workspace_vue_package() -> Option<PathBuf> {
+    let root = workspace_root();
+    [
+        root.join("node_modules/vue"),
+        root.join("tests/node_modules/vue"),
+        root.join("playground/node_modules/vue"),
+        root.join("examples/vite-musea/node_modules/vue"),
+        root.join("examples/jsx-tsx/node_modules/vue"),
+        root.join("npm/framework/nuxt/node_modules/vue"),
+    ]
+    .into_iter()
+    .find(|candidate| candidate.exists())
+}
+
+/// Match existing Canon CLI fixtures: link Vue and its namespace into the
+/// isolated project instead of assuming the workspace root depends on Vue.
+fn link_workspace_vue(project_root: &Path, vue_package: &Path) -> std::io::Result<()> {
+    let workspace_node_modules = vue_package.parent().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "workspace Vue package has no node_modules parent",
+        )
+    })?;
+    let target = project_root.join("node_modules");
+    std::fs::create_dir_all(&target)?;
+    symlink_path(vue_package, &target.join("vue"))?;
+    let vue_namespace = workspace_node_modules.join("@vue");
+    if vue_namespace.exists() {
+        symlink_path(&vue_namespace, &target.join("@vue"))?;
     }
+    Ok(())
 }
 
 /// The Corsa binary to check with: `CORSA_PATH` when set, else the workspace

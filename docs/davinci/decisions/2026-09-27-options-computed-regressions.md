@@ -31,6 +31,10 @@ reference through the original Rust CLI integration test. A writable setter
 produces no assignment diagnostic; the getter-only assignment retains its
 severity, source position, TS2588 code and full message. The oracle compares
 the entire diagnostic sequence and exit status, with no assertion-lint exemption.
+Resolve Vue from the existing root/tests/playground/examples/nuxt package paths
+and link its `@vue` namespace. `VIZE_TEST_REQUIRE_TSGO=1` fails on missing Vue;
+the explicit T0 engine opt-out remains deferred. Original source CI finished the
+CLI test in 0.00s with its root-only lookup, so it provides no runtime credit.
 
 This explicitly registered typechecker fixture does not enter automatic
 `tests/_fixtures` L2/L3 sweeps. Their baselines are not changed without execution.
