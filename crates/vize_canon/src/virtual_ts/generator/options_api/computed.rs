@@ -25,10 +25,86 @@ pub(super) fn writable_computed_names<'a>(
 ) -> FxHashSet<String> {
     let object_bindings = collect_object_expression_values(program);
     let mut seen = FxHashSet::default();
-    resolved_computed_writability(options, &object_bindings, &mut seen)
+    let resolved = resolved_computed_writability(options, &object_bindings, &mut seen);
+    // Vue reads a template name from `data`, then `props`, and only then from
+    // the context that exposes computed members, so a computed sharing a
+    // prop's name never provides the value: the prop does, and it is
+    // read-only. (`data` sharing the name is writable in its own right.)
+    let props = resolved_prop_names(options, &object_bindings, &mut seen);
+    resolved
         .into_iter()
-        .filter_map(|(name, writable)| writable.then_some(name))
+        .filter_map(|(name, writable)| (writable && !props.contains(&name)).then_some(name))
         .collect()
+}
+
+/// Every prop name an options object resolves to through `extends`, `mixins`
+/// and its own `props`, in array (`['a']`) or object (`{ a: ... }`) form.
+fn resolved_prop_names<'a>(
+    options: &'a ObjectExpression<'a>,
+    object_bindings: &FxHashMap<&'a str, &'a ObjectExpression<'a>>,
+    seen: &mut FxHashSet<u32>,
+) -> FxHashSet<String> {
+    let mut props = FxHashSet::default();
+    if !seen.insert(options.span.start) {
+        return props;
+    }
+    for source in inherited_options_objects(options, object_bindings) {
+        props.extend(resolved_prop_names(source, object_bindings, seen));
+    }
+    match option_expression_property(options, "props") {
+        Some(Expression::ArrayExpression(names)) => {
+            for element in names.elements.iter() {
+                if let Some(Expression::StringLiteral(name)) = element.as_expression() {
+                    props.insert(String::from(name.value.as_str()));
+                }
+            }
+        }
+        Some(expression) => {
+            if let Some(object) = object_expression_from_expression(expression) {
+                for property in object.properties.iter() {
+                    let ObjectPropertyKind::ObjectProperty(property) = property else {
+                        continue;
+                    };
+                    if property.computed {
+                        continue;
+                    }
+                    if let Some(name) = property_key_name(&property.key) {
+                        props.insert(String::from(name));
+                    }
+                }
+            }
+        }
+        None => {}
+    }
+    seen.remove(&options.span.start);
+    props
+}
+
+/// The options objects an object inherits from, in Vue's merge order:
+/// `extends` first, then each `mixins` entry.
+fn inherited_options_objects<'a>(
+    options: &'a ObjectExpression<'a>,
+    object_bindings: &FxHashMap<&'a str, &'a ObjectExpression<'a>>,
+) -> Vec<&'a ObjectExpression<'a>> {
+    let mut sources = Vec::new();
+    if let Some(extends) = option_expression_property(options, "extends")
+        && let Some(target) = resolve_options_object(extends, object_bindings)
+    {
+        sources.push(target);
+    }
+    if let Some(Expression::ArrayExpression(mixins)) = option_expression_property(options, "mixins")
+    {
+        for element in mixins.elements.iter() {
+            // Spreads and holes are not options objects.
+            let Some(expression) = element.as_expression() else {
+                continue;
+            };
+            if let Some(target) = resolve_options_object(expression, object_bindings) {
+                sources.push(target);
+            }
+        }
+    }
+    sources
 }
 
 /// Every `computed` name an options object resolves to, with whether it is
@@ -47,22 +123,8 @@ fn resolved_computed_writability<'a>(
     if !seen.insert(options.span.start) {
         return resolved;
     }
-    if let Some(extends) = option_expression_property(options, "extends")
-        && let Some(target) = resolve_options_object(extends, object_bindings)
-    {
-        resolved.extend(resolved_computed_writability(target, object_bindings, seen));
-    }
-    if let Some(Expression::ArrayExpression(mixins)) = option_expression_property(options, "mixins")
-    {
-        for element in mixins.elements.iter() {
-            // Spreads and holes are not options objects.
-            let Some(expression) = element.as_expression() else {
-                continue;
-            };
-            if let Some(target) = resolve_options_object(expression, object_bindings) {
-                resolved.extend(resolved_computed_writability(target, object_bindings, seen));
-            }
-        }
+    for source in inherited_options_objects(options, object_bindings) {
+        resolved.extend(resolved_computed_writability(source, object_bindings, seen));
     }
     for (name, writable) in local_computed_writability(options) {
         resolved.insert(name, writable);

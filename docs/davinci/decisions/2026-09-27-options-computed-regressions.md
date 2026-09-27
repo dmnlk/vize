@@ -17,9 +17,13 @@ under the existing Options API template-binding gate, and setup-only rewrite
 classification remains disabled. Existing rewrite guards, merge precedence,
 repeated mixins, recursion-path removal and authored emission/mapping bodies are
 preserved. The runtime-props helper's existing separate parse is outside this
-small change. Two joint-result tests cover export spans, repeated/exported mixin
-precedence, unresolved extends and independent rewrite/binding gates. Source
+small change. Joint-result tests cover export spans, repeated/exported mixin
+precedence, unresolved extends, independent rewrite/binding gates and export
+whitespace/comment controls that keep computed analysis unconditional. Source
 compilation and exact diagnostic execution remain pending existing PR Actions.
+The owner's later `5e0048c0` computed/prop-collision fix is preserved in a
+separate private compatibility commit: its resolution body and regression test
+remain byte-exact, with only the duplicate parse entry replaced by shared inputs.
 
 The authored `tests/fixtures/typechecker/options-api-writable-computed` case
 registers the existing SFC, compiler options, provenance and complete diagnostic

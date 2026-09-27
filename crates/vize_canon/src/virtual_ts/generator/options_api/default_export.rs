@@ -184,4 +184,18 @@ export default {
         assert!(options_only.writable_computed.contains("ratio"));
         assert!(options_only.has_unresolved_extends);
     }
+
+    #[test]
+    fn authored_export_spacing_keeps_unconditional_computed_analysis() {
+        for keyword in ["export\n default", "export /* gap */ default"] {
+            let script = format!(
+                "{keyword} {{ extends: ImportedBase, computed: {{ ratio: {{ set(v) {{}} }} }} }}"
+            );
+            let facts = analyze_options_api_script(&script, true, true);
+            assert!(facts.writable_computed.contains("ratio"));
+            // These two existing helpers keep their original literal guards.
+            assert!(facts.default_export.object.is_none());
+            assert!(!facts.has_unresolved_extends);
+        }
+    }
 }

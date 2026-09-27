@@ -262,3 +262,50 @@ export default {
         ]
     );
 }
+
+/// Vue resolves a template name from `data`, then `props`, and only then from
+/// the context that exposes computed members. A writable computed that shares
+/// a prop's name (its own, or one inherited from a mixin) never provides the
+/// value, and the prop is read-only, so the binding stays `const`.
+#[test]
+fn writable_computed_sharing_a_prop_name_stays_const() {
+    let script = r#"const withSize = {
+    props: { size: String },
+}
+
+export default {
+    mixins: [withSize],
+    props: ['ratio'],
+    computed: {
+        ratio: {
+            get(): string {
+                return '1'
+            },
+            set(_value: string) {},
+        },
+        size: {
+            get(): string {
+                return 's'
+            },
+            set(_value: string) {},
+        },
+        free: {
+            get(): string {
+                return 'f'
+            },
+            set(_value: string) {},
+        },
+    },
+}
+"#;
+    let declarations =
+        options_api_declarations(script, r#"<div>{{ ratio }} {{ size }} {{ free }}</div>"#);
+    assert_eq!(
+        declarations,
+        [
+            "  var free: __VizeOptionsBinding<typeof __default__, \"free\"> = undefined as any;",
+            "  const ratio: __VizeOptionsBinding<typeof __default__, \"ratio\"> = undefined as any;",
+            "  const size: __VizeOptionsBinding<typeof __default__, \"size\"> = undefined as any;",
+        ]
+    );
+}
