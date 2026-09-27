@@ -1,9 +1,12 @@
 //! Resolve the writability of local and inherited Options API computed members.
 
 use oxc_ast::ast::{
-    Declaration, Expression, ObjectExpression, ObjectPropertyKind, Program, PropertyKind, Statement,
+    ArrayExpression, Declaration, Expression, ObjectExpression, ObjectPropertyKind, Program,
+    PropertyKind, Statement,
 };
 use vize_carton::{FxHashMap, FxHashSet, String};
+
+use crate::virtual_ts::helpers::to_camel_case;
 
 use super::{
     component_options_from_call, object_expression_from_expression, option_expression_property,
@@ -51,30 +54,32 @@ fn resolved_prop_names<'a>(
     for source in inherited_options_objects(options, object_bindings) {
         props.extend(resolved_prop_names(source, object_bindings, seen));
     }
-    match option_expression_property(options, "props") {
-        Some(Expression::ArrayExpression(names)) => {
+    // A prop is declared in either case form and read by its camelCase name,
+    // so `props: ['foo-bar']` shadows a computed `fooBar`; keep both spellings.
+    let mut add_prop = |name: &str| {
+        props.insert(String::from(name));
+        props.insert(to_camel_case(name));
+    };
+    if let Some(expression) = option_expression_property(options, "props") {
+        if let Some(names) = array_expression_from_expression(expression) {
             for element in names.elements.iter() {
                 if let Some(Expression::StringLiteral(name)) = element.as_expression() {
-                    props.insert(String::from(name.value.as_str()));
+                    add_prop(name.value.as_str());
+                }
+            }
+        } else if let Some(object) = object_expression_from_expression(expression) {
+            for property in object.properties.iter() {
+                let ObjectPropertyKind::ObjectProperty(property) = property else {
+                    continue;
+                };
+                if property.computed {
+                    continue;
+                }
+                if let Some(name) = property_key_name(&property.key) {
+                    add_prop(name);
                 }
             }
         }
-        Some(expression) => {
-            if let Some(object) = object_expression_from_expression(expression) {
-                for property in object.properties.iter() {
-                    let ObjectPropertyKind::ObjectProperty(property) = property else {
-                        continue;
-                    };
-                    if property.computed {
-                        continue;
-                    }
-                    if let Some(name) = property_key_name(&property.key) {
-                        props.insert(String::from(name));
-                    }
-                }
-            }
-        }
-        None => {}
     }
     seen.remove(&options.span.start);
     props
@@ -92,7 +97,8 @@ fn inherited_options_objects<'a>(
     {
         sources.push(target);
     }
-    if let Some(Expression::ArrayExpression(mixins)) = option_expression_property(options, "mixins")
+    if let Some(mixins) =
+        option_expression_property(options, "mixins").and_then(array_expression_from_expression)
     {
         for element in mixins.elements.iter() {
             // Spreads and holes are not options objects.
@@ -105,6 +111,45 @@ fn inherited_options_objects<'a>(
         }
     }
     sources
+}
+
+/// Whether a computed descriptor's `set` entry can be called: a function or
+/// method, or a value the script computes (a reference, a call) that only the
+/// checker can judge. A statically absent setter (`set: undefined`, `null`,
+/// a literal) leaves the computed read-only, as Vue ignores it.
+fn is_usable_setter(value: &Expression<'_>) -> bool {
+    !matches!(
+        value,
+        Expression::NullLiteral(_)
+            | Expression::BooleanLiteral(_)
+            | Expression::NumericLiteral(_)
+            | Expression::StringLiteral(_)
+            | Expression::TemplateLiteral(_)
+    ) && !matches!(value, Expression::Identifier(identifier) if identifier.name == "undefined")
+}
+
+/// The array an option holds, looking through parentheses and TypeScript
+/// wrappers such as `(['a'] as const)`, like the object-resolution helpers.
+fn array_expression_from_expression<'a>(
+    expression: &'a Expression<'a>,
+) -> Option<&'a ArrayExpression<'a>> {
+    match expression {
+        Expression::ArrayExpression(array) => Some(array.as_ref()),
+        Expression::ParenthesizedExpression(parenthesized) => {
+            array_expression_from_expression(&parenthesized.expression)
+        }
+        Expression::TSAsExpression(ts_as) => array_expression_from_expression(&ts_as.expression),
+        Expression::TSSatisfiesExpression(ts_satisfies) => {
+            array_expression_from_expression(&ts_satisfies.expression)
+        }
+        Expression::TSNonNullExpression(ts_non_null) => {
+            array_expression_from_expression(&ts_non_null.expression)
+        }
+        Expression::TSTypeAssertion(assertion) => {
+            array_expression_from_expression(&assertion.expression)
+        }
+        _ => None,
+    }
 }
 
 /// Every `computed` name an options object resolves to, with whether it is
@@ -155,7 +200,8 @@ fn local_computed_writability<'a>(options: &'a ObjectExpression<'a>) -> Vec<(Str
             PropertyKind::Set => true,
             PropertyKind::Get => false,
             PropertyKind::Init => object_expression_from_expression(&property.value)
-                .is_some_and(|descriptor| option_expression_property(descriptor, "set").is_some()),
+                .and_then(|descriptor| option_expression_property(descriptor, "set"))
+                .is_some_and(is_usable_setter),
         };
         match local.iter_mut().find(|(existing, _)| existing == name) {
             Some((_, existing_writable)) => *existing_writable |= writable,
