@@ -4,6 +4,7 @@
 <script lang="ts">
 // This function's local name does not shadow the descriptor's module scope.
 function unrelated() {
+  // oxlint-disable-next-line no-shadow-restricted-names -- Intentional function-local binding does not shadow module undefined.
   const undefined = (_value: string) => {}
   return undefined
 }

@@ -70,3 +70,14 @@ membership/hash metadata. The complete exact diagnostic oracle must be checked
 by the existing source-built CLI/TSGO Actions gate after publication. Review
 threads and latest-head checks remain required before auto-merge; no bot review
 is dismissed or bypassed.
+
+The two registered fixture directories join the existing formatter-sensitive
+fixture policy: fresh source Actions reported seven formatting-only failures,
+and formatting would change authored source positions and golden diagnostic
+bytes. Lint, assertion and source-length policies remain fully enforced.
+
+Three new lexical setter controls deliberately shadow builtin `undefined`;
+HoistedSetter also executes an `if (true)` nested var declaration. Precise
+next-line lint annotations explain those control inputs without changing any
+root lint rule. Their source digests are refreshed; all complete binding vectors
+and the author’s WrappedOptions/WritableComputed inputs remain unchanged.

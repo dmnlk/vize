@@ -35,12 +35,12 @@
   "nativeComparisons": 0,
   "sha256": {
     "HoistedSetter.bindings.json": "4ab67756da604036243cf252460ba658351e2dfb9f70526ffc93f2cbaf58417a",
-    "HoistedSetter.vue": "338337311695e21bbbc8a0b71e384d74895724fcf65961f32b63c6301954a7fa",
+    "HoistedSetter.vue": "935577a92a0266d3359413cbc30f2a063d2acd101e54ef2b950a08dad9f1bbf5",
     "ShadowedSetter.bindings.json": "3ad03aa6f1fcad902076bb86f241c6d7eebf488be3acfa9a641728d457d0b695",
-    "ShadowedSetter.vue": "544959ce326edcf338190a087c84bc594d42b2004d00b625e3243aa6120cdd2c",
+    "ShadowedSetter.vue": "78788fc1f642ec0877d63ad0a6d5ab055a7579259391c4d35589caad0d878fb2",
     "WrappedOptions.bindings.json": "2842bd0654342a543de8f995b6514d8b32092922ea85cddb708f49f3b183dc6e",
     "WrappedOptions.vue": "7d8899b9d65ddcc22694ebef43f7f5339374708c5ff5373734061d1ef9d5559d",
     "WrappedSetters.bindings.json": "6e1b8fd7f89892ad7be34fa85819f75c8b9896a7cd2dd00cbf5e089782eac149",
-    "WrappedSetters.vue": "5a0b907dbe735af14175d844cd3f30c092bbc0191c569fdb000ee1923ff246ba"
+    "WrappedSetters.vue": "827d9fa9def0a185a945a4aab9887c1f419ad4cf7648e907c2bc9835f6054ac7"
   }
 }
