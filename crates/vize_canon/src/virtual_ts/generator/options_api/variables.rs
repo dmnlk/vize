@@ -1,10 +1,13 @@
 //! Authored mappings for generated Options API template bindings.
 
-use super::{is_safe_value_identifier, unresolved_extends_template_names, writable_computed_names};
+use super::{is_safe_value_identifier, unresolved_extends_template_names};
 use crate::virtual_ts::helpers::is_reserved_identifier;
 use crate::virtual_ts::{VirtualTsOptions, VizeMapping, VizeSemanticLink, VizeSemanticLinkKind};
 use vize_carton::{FxHashSet, String, append};
 use vize_croquis::{BindingType, Croquis};
+
+mod writable_computed;
+use writable_computed::writable_computed_names;
 
 // Emit declarations for Options API template bindings (`data`/`computed`/
 // `methods`/`inject`/`setup`/`props`, plus legacy globals) when the caller

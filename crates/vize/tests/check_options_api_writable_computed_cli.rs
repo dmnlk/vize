@@ -53,19 +53,9 @@ fn check_options_api_writable_computed_assignment_passes() {
     // The getter-only computed stays read-only: exactly that assignment is
     // reported, and the writable computed is not.
     assert_eq!(
-        diagnostics.len(),
-        1,
-        "only the getter-only computed assignment may be reported; got {diagnostics:?}\nstdout:\n{stdout}\nstderr:\n{stderr}"
-    );
-    assert!(
-        diagnostics[0].contains("readonlyLabel") && diagnostics[0].contains("[TS2588]"),
-        "the getter-only computed assignment must still be reported; got {diagnostics:?}\nstdout:\n{stdout}\nstderr:\n{stderr}"
-    );
-    assert!(
-        !diagnostics
-            .iter()
-            .any(|diagnostic| diagnostic.contains("'ratio'")),
-        "the writable computed assignment must not be reported; got {diagnostics:?}\nstdout:\n{stdout}\nstderr:\n{stderr}"
+        diagnostics,
+        ["error:4:21 [TS2588] Cannot assign to 'readonlyLabel' because it is a constant."],
+        "stdout:\n{stdout}\nstderr:\n{stderr}"
     );
 
     let _ = std::fs::remove_dir_all(&project_root);
