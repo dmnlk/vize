@@ -3,7 +3,7 @@
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{
     Argument, CallExpression, ExportDefaultDeclarationKind, Expression, ObjectExpression,
-    ObjectPropertyKind, Program, PropertyKey, Statement,
+    ObjectPropertyKind, Program, PropertyKey, PropertyKind, Statement,
 };
 use oxc_parser::Parser;
 use oxc_span::{GetSpan, SourceType};
@@ -11,7 +11,7 @@ use vize_croquis::Croquis;
 use vize_croquis::facts::used_component_name_list;
 
 use super::options_api_support::is_safe_value_identifier;
-use vize_carton::{CompactString, FxHashSet, String};
+use vize_carton::{CompactString, FxHashMap, FxHashSet, String};
 
 mod variables;
 pub(super) use variables::generate_options_api_variables;
@@ -426,4 +426,117 @@ pub(super) fn safe_identifier(name: &str) -> String {
         result.push('_');
     }
     result
+}
+
+/// Names of `computed` members that declare a setter.
+///
+/// Vue exposes a `{ get, set }` computed (or a `get`/`set` accessor pair) as a
+/// writable instance property, so a template assignment such as
+/// `@input="ratio = $event"` is valid where a getter-only computed stays
+/// read-only. Same-file `mixins` / `extends` objects contribute their members
+/// the same way the template-binding collector reads them.
+pub(super) fn writable_computed_names(script: &str) -> FxHashSet<String> {
+    let mut names = FxHashSet::default();
+    let allocator = Allocator::default();
+    let parsed = Parser::new(&allocator, script, SourceType::ts()).parse();
+    if parsed.panicked {
+        return names;
+    }
+    let Some(options) = component_options_from_program(&parsed.program) else {
+        return names;
+    };
+    let object_bindings = collect_object_expression_values(&parsed.program);
+    let mut seen = FxHashSet::default();
+    collect_writable_computed_names(options, &object_bindings, &mut seen, &mut names);
+    names
+}
+
+fn collect_writable_computed_names<'a>(
+    options: &'a ObjectExpression<'a>,
+    object_bindings: &FxHashMap<&'a str, &'a ObjectExpression<'a>>,
+    seen: &mut FxHashSet<u32>,
+    names: &mut FxHashSet<String>,
+) {
+    if !seen.insert(options.span.start) {
+        return;
+    }
+    if let Some(computed) = option_object_property(options, "computed") {
+        for property in computed.properties.iter() {
+            let ObjectPropertyKind::ObjectProperty(property) = property else {
+                continue;
+            };
+            if property.computed {
+                continue;
+            }
+            let Some(name) = property_key_name(&property.key) else {
+                continue;
+            };
+            let writable = match property.kind {
+                PropertyKind::Set => true,
+                PropertyKind::Get => false,
+                PropertyKind::Init => object_expression_from_expression(&property.value)
+                    .is_some_and(|descriptor| {
+                        option_expression_property(descriptor, "set").is_some()
+                    }),
+            };
+            if writable {
+                names.insert(String::from(name));
+            }
+        }
+    }
+    if let Some(extends) = option_expression_property(options, "extends")
+        && let Some(target) = resolve_options_object(extends, object_bindings)
+    {
+        collect_writable_computed_names(target, object_bindings, seen, names);
+    }
+    if let Some(Expression::ArrayExpression(mixins)) = option_expression_property(options, "mixins")
+    {
+        for element in mixins.elements.iter() {
+            // Spreads and holes are not options objects.
+            let Some(expression) = element.as_expression() else {
+                continue;
+            };
+            if let Some(target) = resolve_options_object(expression, object_bindings) {
+                collect_writable_computed_names(target, object_bindings, seen, names);
+            }
+        }
+    }
+}
+
+/// Module-scope `const name = { ... }` objects, the same-file targets a
+/// `mixins` / `extends` entry can name.
+fn collect_object_expression_values<'a>(
+    program: &'a Program<'a>,
+) -> FxHashMap<&'a str, &'a ObjectExpression<'a>> {
+    let mut bindings = FxHashMap::default();
+    for statement in program.body.iter() {
+        let Statement::VariableDeclaration(declaration) = statement else {
+            continue;
+        };
+        for declarator in declaration.declarations.iter() {
+            let oxc_ast::ast::BindingPattern::BindingIdentifier(id) = &declarator.id else {
+                continue;
+            };
+            let Some(init) = declarator.init.as_ref() else {
+                continue;
+            };
+            if let Some(object) = resolve_options_object(init, &FxHashMap::default()) {
+                bindings.insert(id.name.as_str(), object);
+            }
+        }
+    }
+    bindings
+}
+
+fn resolve_options_object<'a>(
+    expression: &'a Expression<'a>,
+    object_bindings: &FxHashMap<&'a str, &'a ObjectExpression<'a>>,
+) -> Option<&'a ObjectExpression<'a>> {
+    match expression {
+        Expression::Identifier(identifier) => {
+            object_bindings.get(identifier.name.as_str()).copied()
+        }
+        Expression::CallExpression(call) => component_options_from_call(call),
+        _ => object_expression_from_expression(expression),
+    }
 }

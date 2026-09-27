@@ -1,6 +1,6 @@
 //! Authored mappings for generated Options API template bindings.
 
-use super::{is_safe_value_identifier, unresolved_extends_template_names};
+use super::{is_safe_value_identifier, unresolved_extends_template_names, writable_computed_names};
 use crate::virtual_ts::helpers::is_reserved_identifier;
 use crate::virtual_ts::{VirtualTsOptions, VizeMapping, VizeSemanticLink, VizeSemanticLinkKind};
 use vize_carton::{FxHashSet, String, append};
@@ -32,6 +32,10 @@ pub(in crate::virtual_ts::generator) fn generate_options_api_variables(
         .iter()
         .map(|global| global.name.as_str())
         .collect();
+    // A `{ get, set }` computed is a writable instance property: assigning to
+    // it from the template is valid, where a getter-only computed stays
+    // read-only like every other option member.
+    let writable_computed = script.map(writable_computed_names).unwrap_or_default();
     let mut names: Vec<(String, bool)> =
         crate::virtual_ts::script_facts::with_bindings(summary, |bindings| {
             let script_setup = bindings.is_script_setup();
@@ -40,7 +44,8 @@ pub(in crate::virtual_ts::generator) fn generate_options_api_variables(
                 .filter_map(|(name, binding_type)| {
                     let mutable = match binding_type {
                         BindingType::Data => true,
-                        BindingType::Options | BindingType::VueGlobal => false,
+                        BindingType::Options => writable_computed.contains(name),
+                        BindingType::VueGlobal => false,
                         BindingType::Props if !script_setup && !macro_prop_names.contains(name) => {
                             false
                         }
