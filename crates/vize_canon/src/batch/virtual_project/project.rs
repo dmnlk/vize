@@ -48,6 +48,7 @@ impl VirtualProject {
             package_route_reverse: FxHashMap::default(),
             package_route_importers: FxHashMap::default(),
             package_route_source_owners: FxHashMap::default(),
+            package_route_source_paths: FxHashMap::default(),
             package_route_manifests: FxHashMap::default(),
             package_route_roots: FxHashMap::default(),
             package_source_index: FxHashMap::default(),

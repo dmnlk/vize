@@ -31,6 +31,7 @@ impl VirtualProject {
         self.package_route_reverse.clear();
         self.package_route_importers.clear();
         self.package_route_source_owners.clear();
+        self.package_route_source_paths.clear();
         self.package_route_manifests.clear();
         self.package_route_roots.clear();
         self.package_shadow_dirty_keys.clear();
@@ -101,6 +102,10 @@ impl VirtualProject {
                     .insert(key.clone());
             }
             for source in route.all_source_paths() {
+                *self
+                    .package_route_source_paths
+                    .entry(source.clone())
+                    .or_default() += 1;
                 let source = vize_carton::path::canonicalize_non_verbatim(source);
                 *self.package_route_source_owners.entry(source).or_default() += 1;
             }
@@ -183,6 +188,16 @@ impl VirtualProject {
             }
         }
         for source in route.all_source_paths() {
+            let remove = self
+                .package_route_source_paths
+                .get_mut(source)
+                .is_some_and(|count| {
+                    *count = count.saturating_sub(1);
+                    *count == 0
+                });
+            if remove {
+                self.package_route_source_paths.remove(source);
+            }
             let source = vize_carton::path::canonicalize_non_verbatim(source);
             let remove = self
                 .package_route_source_owners

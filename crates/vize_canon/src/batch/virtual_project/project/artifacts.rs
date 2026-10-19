@@ -12,15 +12,7 @@ const MUSEA_DEFINE_ART_STUB: &str =
 
 impl VirtualProject {
     pub(in crate::batch::virtual_project) fn is_package_route_path(&self, path: &Path) -> bool {
-        self.package_routes
-            .values()
-            .filter_map(|binding| binding.route.as_ref())
-            .any(|route| {
-                route
-                    .all_source_paths()
-                    .into_iter()
-                    .any(|source| source == path)
-            })
+        self.package_route_source_paths.contains_key(path)
     }
 
     pub(super) fn absorb_registered_file(&mut self, registered: RegisteredFile) -> CorsaResult<()> {

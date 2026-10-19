@@ -12,6 +12,7 @@ mod graphql_generated;
 mod macro_scope;
 mod materialization_namespace;
 mod module_augmentations;
+mod package_route_source_paths;
 mod project_isolation;
 mod ref_arity;
 mod setup_props;

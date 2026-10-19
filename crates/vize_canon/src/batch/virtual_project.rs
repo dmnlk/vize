@@ -223,6 +223,10 @@ pub struct VirtualProject {
     package_route_reverse: FxHashMap<PathBuf, FxHashSet<crate::package_route::PackageRouteKey>>,
     package_route_importers: FxHashMap<PathBuf, FxHashSet<crate::package_route::PackageRouteKey>>,
     package_route_source_owners: FxHashMap<PathBuf, usize>,
+    /// `package_route_source_owners` keyed by the uncanonicalized route source
+    /// paths, so `is_package_route_path` is a lookup instead of a scan of every
+    /// route on each registered file.
+    package_route_source_paths: FxHashMap<PathBuf, usize>,
     package_route_manifests: FxHashMap<PathBuf, FxHashSet<crate::package_route::PackageRouteKey>>,
     package_route_roots: FxHashMap<PathBuf, FxHashSet<crate::package_route::PackageRouteKey>>,
     package_source_index: FxHashMap<PathBuf, FxHashMap<PathBuf, (PathBuf, PathBuf)>>,
