@@ -22,7 +22,7 @@ const CSS_LOADER_OPTIONS: Record<string, Record<string, unknown>> = {
   "string export": { exportType: "string" },
 };
 
-async function cssModulesOf(name: string, options: Record<string, unknown>) {
+async function cssModulesOf(name: string, rules: webpack.RuleSetRule[]) {
   const outputPath = prepareOutputDir(`webpack-css-modules-${name.replaceAll(" ", "-")}`);
   const entry = path.join(outputPath, "entry.js");
   fs.writeFileSync(
@@ -37,7 +37,7 @@ async function cssModulesOf(name: string, options: Record<string, unknown>) {
     externals: { vue: `commonjs ${require.resolve("vue")}` },
     output: { path: outputPath, filename: "bundle.cjs", library: { type: "commonjs2" } },
     infrastructureLogging: { level: "error" },
-    module: { rules: [{ test: /\.css$/, use: [{ loader: CSS_LOADER, options }] }] },
+    module: { rules },
     plugins: [vizeWebpack({ isProduction: true })],
     resolve: { extensions: [".ts", ".js", ".vue"] },
   });
@@ -57,7 +57,9 @@ async function cssModulesOf(name: string, options: Record<string, unknown>) {
 
 for (const [name, options] of Object.entries(CSS_LOADER_OPTIONS)) {
   void test(`webpack css modules (${name}): $style is css-loader's class map`, async (t: TestContext) => {
-    const { bundle, modules } = await cssModulesOf(name, options);
+    const { bundle, modules } = await cssModulesOf(name, [
+      { test: /\.css$/, use: [{ loader: CSS_LOADER, options }] },
+    ]);
     const root = (modules.$style as { root?: unknown } | undefined)?.root;
     t.assert.equal(typeof root, "string");
     // The generated class is the one css-loader wrote into the CSS.
@@ -65,3 +67,29 @@ for (const [name, options] of Object.entries(CSS_LOADER_OPTIONS)) {
     t.assert.deepEqual(Object.keys(modules.$style as object), ["root"]);
   });
 }
+
+// vue-loader hosts tell CSS modules apart by the `?module` resource query and
+// often compile every other style with `modules: "global"` (no local names).
+void test("webpack css modules: host rules keyed on resourceQuery /module/ apply", async (t: TestContext) => {
+  const { bundle, modules } = await cssModulesOf("resource-query", [
+    {
+      test: /\.css$/,
+      oneOf: [
+        {
+          resourceQuery: /module/,
+          use: [
+            {
+              loader: CSS_LOADER,
+              options: { modules: { localIdentName: "[local]_[hash:base64:8]" } },
+            },
+          ],
+        },
+        { use: [{ loader: CSS_LOADER, options: { modules: "global" } }] },
+      ],
+    },
+  ]);
+  const root = (modules.$style as { root?: unknown } | undefined)?.root;
+  t.assert.equal(typeof root, "string");
+  t.assert.match(String(root), /^root_/);
+  t.assert.match(bundle, new RegExp(`\\.${String(root)} \\{`));
+});

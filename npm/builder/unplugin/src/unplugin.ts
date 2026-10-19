@@ -23,6 +23,7 @@ import {
   findVirtualModules,
   registerWebpackStyleRule,
   webpackStylePath,
+  webpackStyleRequest,
 } from "./webpack-styles.ts";
 import { stripTypeScript } from "./strip-types.ts";
 import type {
@@ -314,7 +315,7 @@ export const vizeUnplugin = createUnplugin<VizeUnpluginInput>((rawOptions = {}, 
                 stylePath,
                 transformStyleVars(block.content, compiled.scopeId),
               );
-              return stylePath;
+              return webpackStyleRequest(stylePath, block);
             }
           : undefined,
       });

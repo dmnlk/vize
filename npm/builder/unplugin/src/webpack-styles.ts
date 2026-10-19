@@ -23,6 +23,19 @@ export function webpackStylePath(
   return `${filePath}.__vize_style_${block.index}${scope}${module}.${block.lang ?? "css"}`;
 }
 
+// vue-loader configs pick the CSS modules rule by resource query
+// (`oneOf: [{ resourceQuery: /module/, ... }]`), so module blocks carry the same
+// `module` query vue-loader puts on `?vue&type=style` requests. The `vue` param
+// is left out: it would send the request back through `resolveId`.
+export function webpackStyleRequest(stylePath: string, block: StyleBlockInfo): string {
+  if (block.module === false) {
+    return stylePath;
+  }
+  return typeof block.module === "string"
+    ? `${stylePath}?module=${encodeURIComponent(block.module)}`
+    : `${stylePath}?module`;
+}
+
 export function webpackStyleScope(resourcePath: string): string | null {
   return SCOPED_STYLE_FILE.exec(resourcePath)?.[1] ?? null;
 }
