@@ -25,6 +25,7 @@ pub(crate) type EventContractKey = (
     bool,
     Option<String>,
     Option<u32>,
+    Option<u64>,
 );
 
 #[derive(Clone, Copy)]
