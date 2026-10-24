@@ -11,6 +11,7 @@ type PackageIdentity = (PathBuf, PathBuf);
 pub(super) struct WorkspaceShadowPlan {
     incoming: FxHashMap<PathBuf, FxHashSet<PackageIdentity>>,
     divergent: FxHashSet<String>,
+    pub(super) json_modules: super::json_modules::PackageJsonModules,
 }
 
 fn identity(route: &crate::PackageRoute) -> PackageIdentity {
@@ -101,6 +102,7 @@ impl VirtualProject {
                 .into_iter()
                 .filter_map(|(name, roots)| (roots.len() > 1).then_some(name))
                 .collect(),
+            json_modules: Default::default(),
         };
         for binding in self.package_routes.values() {
             if binding.specifier.starts_with('#') {

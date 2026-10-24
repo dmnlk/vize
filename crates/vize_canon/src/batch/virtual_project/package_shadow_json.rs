@@ -7,14 +7,24 @@
 //! the shadowed file and Corsa reports TS2307 (#10350). The bytes are raw
 //! copies, owned with the shadow the same way `package.json` is.
 
+use std::cell::RefCell;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
-use vize_carton::cstr;
+use vize_carton::{FxHashMap, cstr};
 
 use super::super::VirtualProject;
 use super::super::passthrough::collect_relative_json_modules;
 use super::PackageShadowTopology;
+
+/// An indexed package source, its canonical virtual path and the JSON modules
+/// it imports.
+type JsonSource = (PathBuf, PathBuf, Vec<PathBuf>);
+
+/// JSON-importing sources per package root, shared by every shadow of that
+/// package in one rebuild pass. Contents do not change during a pass.
+#[derive(Default)]
+pub(super) struct PackageJsonModules(RefCell<FxHashMap<PathBuf, Vec<JsonSource>>>);
 
 impl VirtualProject {
     pub(super) fn collect_package_json_module_shadows(
@@ -22,24 +32,14 @@ impl VirtualProject {
         source_root: &Path,
         shadow_root: &Path,
         topology: &mut PackageShadowTopology,
+        json_modules: &PackageJsonModules,
     ) {
-        let normalized_root = vize_carton::path::canonicalize_non_verbatim(source_root);
-        let Some(indexed) = self.package_source_index.get(&normalized_root) else {
+        self.memoize_package_json_sources(source_root, json_modules);
+        let memo = json_modules.0.borrow();
+        // Most packages import no JSON; skip the shadow scan for them.
+        let Some(json_sources) = memo.get(source_root).filter(|sources| !sources.is_empty()) else {
             return;
         };
-        // Most package sources import no JSON; skip the shadow scan for them.
-        let mut json_sources = indexed
-            .iter()
-            .filter_map(|(source, (_, virtual_path))| {
-                let content = self.original_contents.get(virtual_path)?;
-                let json_files = collect_relative_json_modules(source, content);
-                (!json_files.is_empty()).then_some((source, virtual_path, json_files))
-            })
-            .collect::<Vec<_>>();
-        if json_sources.is_empty() {
-            return;
-        }
-        json_sources.sort_by(|left, right| left.0.cmp(right.0));
         let mut shadow_files = topology
             .files
             .iter()
@@ -48,7 +48,7 @@ impl VirtualProject {
             .collect::<Vec<_>>();
         shadow_files.sort();
 
-        for (source, virtual_path, json_files) in json_sources {
+        for (source, virtual_path, json_files) in json_sources.iter() {
             let Some(authored_name) = source.file_name() else {
                 continue;
             };
@@ -62,7 +62,7 @@ impl VirtualProject {
                 if !shadow_carries_authored_imports(authored_name, shadow_name) {
                     continue;
                 }
-                for json_file in &json_files {
+                for json_file in json_files {
                     let Some(json_destination) =
                         json_shadow_destination(destination, source, json_file, shadow_root)
                     else {
@@ -78,6 +78,29 @@ impl VirtualProject {
                 }
             }
         }
+    }
+
+    fn memoize_package_json_sources(&self, source_root: &Path, json_modules: &PackageJsonModules) {
+        if json_modules.0.borrow().contains_key(source_root) {
+            return;
+        }
+        let normalized_root = vize_carton::path::canonicalize_non_verbatim(source_root);
+        let mut sources = self
+            .package_source_index
+            .get(&normalized_root)
+            .into_iter()
+            .flatten()
+            .filter_map(|(source, (_, virtual_path))| {
+                let content = self.original_contents.get(virtual_path)?;
+                let json_files = collect_relative_json_modules(source, content);
+                (!json_files.is_empty()).then(|| (source.clone(), virtual_path.clone(), json_files))
+            })
+            .collect::<Vec<_>>();
+        sources.sort_by(|left, right| left.0.cmp(&right.0));
+        json_modules
+            .0
+            .borrow_mut()
+            .insert(source_root.to_path_buf(), sources);
     }
 }
 

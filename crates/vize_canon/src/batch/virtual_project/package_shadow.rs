@@ -228,6 +228,7 @@ impl VirtualProject {
                     &route.package_root,
                     &primary_root,
                     topology,
+                    &plan.json_modules,
                 );
                 return;
             }
@@ -261,7 +262,12 @@ impl VirtualProject {
             );
         }
         self.collect_workspace_dependency_shadows(route, shadow_root, traversal, topology, plan);
-        self.collect_package_json_module_shadows(&route.package_root, shadow_root, topology);
+        self.collect_package_json_module_shadows(
+            &route.package_root,
+            shadow_root,
+            topology,
+            &plan.json_modules,
+        );
         traversal.exit(route);
     }
 

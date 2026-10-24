@@ -86,7 +86,7 @@ fn materialize_writes_dependency_package_json_module() {
         occurrence_mode: crate::PackageResolutionMode::Import,
         context: PackageResolutionContext::default(),
         route: Some(route),
-        invalidation_paths: vec![manifest_path, index_path, tokens_path],
+        invalidation_paths: vec![manifest_path.clone(), index_path, tokens_path],
         shared_invalidation_paths: Vec::new(),
     }]);
     project.register_path(&entry_path).unwrap();
@@ -119,6 +119,24 @@ fn materialize_writes_dependency_package_json_module() {
         json_shadow.display()
     );
     assert_eq!(fs::read_to_string(&json_shadow).unwrap(), json_contents);
+
+    // The package is also shadowed at its canonical mirror. Each shadow of
+    // the same package in one pass carries the JSON, not only the first.
+    let manifest_shadows = project
+        .package_shadow_manifests
+        .iter()
+        .filter(|(_, original)| *original == &manifest_path)
+        .map(|(shadow, _)| shadow.parent().unwrap().to_path_buf())
+        .collect::<Vec<_>>();
+    assert!(manifest_shadows.len() > 1, "{manifest_shadows:?}");
+    for shadow_root in manifest_shadows {
+        let json_shadow = shadow_root.join("src/tokens/source/colors.tokens.json");
+        assert!(
+            project.package_shadow_manifests.contains_key(&json_shadow),
+            "dependency JSON missing from shadow {}",
+            shadow_root.display()
+        );
+    }
 
     let _ = fs::remove_dir_all(&project_root);
     let _ = fs::remove_dir_all(&package_root);
