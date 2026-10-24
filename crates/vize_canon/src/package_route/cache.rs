@@ -50,6 +50,12 @@ struct PackageRouteResolverState {
     canonical_paths: PackagePathCache,
     stamp_snapshots: InputStampCache,
     validation_epoch: u64,
+    /// Search and path caches lent to concurrent misses, so overlapping
+    /// lookups keep manifest reads and realpaths across frontiers.
+    concurrent_caches: Vec<concurrent::ConcurrentLookupCaches>,
+    /// Bumped on every epoch entry, including a restored one, so a lent cache
+    /// resets exactly when the shared caches do.
+    epoch_generation: u64,
     /// Monotonic source of epoch ids, so a restored or later epoch never
     /// reuses an id that cached entries were already marked with.
     epoch_clock: u64,
@@ -81,6 +87,7 @@ impl PackageRouteResolverState {
 
     fn enter_validation_epoch(&mut self, epoch: u64) {
         self.validation_epoch = epoch;
+        self.epoch_generation = self.epoch_generation.wrapping_add(1);
         self.canonical_paths.clear();
         self.stamp_snapshots.clear();
         self.search.enter_validation_epoch(epoch);
@@ -300,6 +307,7 @@ impl PackageRouteResolver {
         state.reachability.clear();
         state.search.clear();
         state.canonical_paths.clear();
+        state.concurrent_caches.clear();
         state.stamp_snapshots.clear();
         state.validation_epoch = 0;
         state.cache_hits = 0;

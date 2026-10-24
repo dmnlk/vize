@@ -2,6 +2,8 @@
 //!
 //! Independent specifiers can overlap. The resolution map is still updated
 //! under the lock, with the same hit and eviction rules as the serial lookup.
+//! Each miss borrows a search and path cache from the resolver, so manifests
+//! and realpaths are not read again for every specifier.
 
 use std::path::Path;
 
@@ -13,6 +15,26 @@ use super::super::{
 };
 use super::lookup::PackageRouteLookup;
 use super::{CachedPackageRouteLookup, PackageRouteResolver, ResolutionKey};
+
+/// A search and path cache lent to one concurrent miss at a time.
+#[derive(Default)]
+pub(super) struct ConcurrentLookupCaches {
+    search: PackageSearchCache,
+    canonical_paths: PackagePathCache,
+    epoch_generation: u64,
+}
+
+impl ConcurrentLookupCaches {
+    /// Reset the same way the shared caches are on an epoch entry, and on
+    /// every miss outside an epoch like the serial lookup.
+    fn enter(&mut self, validation_epoch: u64, epoch_generation: u64) {
+        if validation_epoch == 0 || self.epoch_generation != epoch_generation {
+            self.canonical_paths.clear();
+            self.search.enter_validation_epoch(validation_epoch);
+            self.epoch_generation = epoch_generation;
+        }
+    }
+}
 
 impl PackageRouteResolver {
     /// Same context as [`Self::resolution_context`], without the resolver lock.
@@ -52,7 +74,7 @@ impl PackageRouteResolver {
             options,
             context,
         );
-        {
+        let mut caches = {
             let mut state = self
                 .state
                 .lock()
@@ -65,18 +87,20 @@ impl PackageRouteResolver {
             if state.validation_epoch == 0 {
                 state.canonical_paths.clear();
             }
-        }
+            let mut caches = state.concurrent_caches.pop().unwrap_or_default();
+            caches.enter(state.validation_epoch, state.epoch_generation);
+            caches
+        };
 
-        let mut search = PackageSearchCache::default();
-        let mut canonical_paths = PackagePathCache::default();
+        let reads_before = caches.search.manifest_reads();
         let lookup = lookup_uncached(
             &logical_importer_dir,
             specifier,
             options,
-            &mut search,
-            &mut canonical_paths,
+            &mut caches.search,
+            &mut caches.canonical_paths,
         );
-        let manifest_reads = search.manifest_reads();
+        let manifest_reads = caches.search.manifest_reads() - reads_before;
         let stamps = stamp_paths(&lookup.invalidation_paths);
 
         let mut state = self
@@ -98,6 +122,7 @@ impl PackageRouteResolver {
         let clock = state.clock;
         let validation_epoch = state.validation_epoch;
         state.search.add_manifest_reads(manifest_reads);
+        state.concurrent_caches.push(caches);
         state.resolutions.insert(
             key,
             CachedPackageRouteLookup {

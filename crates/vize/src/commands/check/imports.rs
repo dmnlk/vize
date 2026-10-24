@@ -185,6 +185,9 @@ pub(super) fn collect_transitive_local_imports_with_session(
     let mut deferred_workspace_routes = Vec::new();
     let mut alias_targets: FxHashMap<String, Option<PathBuf>> = FxHashMap::default();
 
+    // Queue entries below this length were already handed to a frontier.
+    // The queue is a stack, so only entries pushed since then are new.
+    let mut prepared_queue_len = 0;
     while let Some((file, materialized_parent, package_graph)) = queue.pop() {
         let Some(dir) = file.parent() else {
             continue;
@@ -192,15 +195,19 @@ pub(super) fn collect_transitive_local_imports_with_session(
         // Default runs walk the same roots again after adding hidden ambient
         // declarations; the session keeps each file's specifiers for that pass.
         // Package and `paths` misses for this frontier resolve off this thread.
+        let new_entries = queue
+            .get(prepared_queue_len.min(queue.len())..)
+            .unwrap_or_default();
         parallel::prepare_frontier(
             &file,
-            &queue,
+            new_entries,
             session,
             packages,
             aliases,
             options,
             &mut alias_targets,
         );
+        prepared_queue_len = queue.len();
         let Some(cached) = session.registration_cache.module_specifiers.remove(&file) else {
             continue;
         };

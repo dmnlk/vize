@@ -120,6 +120,57 @@ fn validation_scope_validates_once_and_revalidates_after_it_ends() {
     assert_eq!(types(resolver.lookup(&importer, "pkg-a", options)), before);
 }
 
+#[test]
+fn concurrent_misses_reuse_manifests_and_revalidate_in_a_new_epoch() {
+    let root = tempfile::tempdir().unwrap();
+    let importer = root.path().join("packages/app/src");
+    let nested = importer.join("nested");
+    let deeper = nested.join("deeper");
+    std::fs::create_dir_all(&deeper).unwrap();
+    write_package(
+        root.path(),
+        "pkg-a",
+        r#"{"name":"pkg-a","types":"./index.ts"}"#,
+    );
+    let options = crate::PackageSourceOptions::new(false, false);
+    let context = crate::PackageResolutionContext::default();
+    let types =
+        |lookup: super::PackageRouteLookup| lookup.into_parts().0.map(|route| route.source_paths);
+    let mut resolver = PackageRouteResolver::default();
+    resolver.begin_validation_epoch();
+
+    let before = types(resolver.lookup_with_context_concurrent(
+        &importer,
+        "pkg-a",
+        options,
+        context.clone(),
+    ));
+    assert!(before.is_some());
+    let reads = resolver.metrics().manifest_reads;
+    assert!(reads > 0);
+    // Another importer directory is a resolution miss. Only that directory's
+    // own manifest is new; the package and ancestor manifests are reused.
+    let _ = resolver.lookup_with_context_concurrent(&nested, "pkg-a", options, context.clone());
+    assert_eq!(resolver.metrics().manifest_reads, reads + 1);
+
+    std::fs::write(
+        root.path()
+            .join("packages/app/node_modules/pkg-a/package.json"),
+        r#"{"name":"pkg-a","types":"./other.d.ts"}"#,
+    )
+    .unwrap();
+    std::fs::write(
+        root.path()
+            .join("packages/app/node_modules/pkg-a/other.d.ts"),
+        "export declare const value: 1;\n",
+    )
+    .unwrap();
+    resolver.begin_validation_epoch();
+    let after = types(resolver.lookup_with_context_concurrent(&deeper, "pkg-a", options, context));
+    assert!(after.is_some());
+    assert_ne!(after, before);
+}
+
 fn write_package(root: &std::path::Path, name: &str, manifest: &str) {
     let package = root.join("packages/app/node_modules").join(name);
     std::fs::create_dir_all(&package).unwrap();
