@@ -104,13 +104,21 @@ fn probes_that_differ_only_in_case_or_normalization_keep_their_stat() {
     let dir = root.path().join("pkg");
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("Index.ts"), "export {};\n").unwrap();
-    std::fs::write(dir.join("caf\u{e9}.ts"), "export {};\n").unwrap();
+    // Beside non-ASCII entries an ASCII probe keeps its stat too: on APFS,
+    // `k.ts` matches a Kelvin-sign `K.ts` through case folding.
+    let unicode = dir.join("unicode");
+    std::fs::create_dir_all(&unicode).unwrap();
+    std::fs::write(unicode.join("caf\u{e9}.ts"), "export {};\n").unwrap();
+    std::fs::write(unicode.join("\u{212a}.ts"), "export {};\n").unwrap();
     let mut cache = PackagePathCache::default();
     for probe in [
         dir.join("index.ts"),
         dir.join("INDEX.TS"),
-        dir.join("cafe\u{301}.ts"),
         dir.join("other.ts"),
+        unicode.join("cafe\u{301}.ts"),
+        unicode.join("k.ts"),
+        unicode.join("K.ts"),
+        unicode.join("other.ts"),
     ] {
         assert_eq!(
             cache.is_file(&probe),

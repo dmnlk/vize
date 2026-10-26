@@ -89,31 +89,48 @@ impl PackageSourceOptions {
 struct DirectoryListing {
     names: FxHashSet<OsString>,
     lowercase: FxHashSet<Vec<u8>>,
+    /// Some entry is not ASCII, so case folding can reach an ASCII probe from
+    /// outside ASCII (`k.ts` matches a Kelvin-sign `K.ts` on APFS).
+    non_ascii: bool,
 }
 
 impl DirectoryListing {
+    /// `None` when the directory cannot be read in full: an entry error would
+    /// leave the listing partial, and a partial listing cannot prove absence.
     fn read(dir: &Path) -> Option<Self> {
-        let entries = std::fs::read_dir(dir).ok()?;
         let mut names = FxHashSet::default();
         let mut lowercase = FxHashSet::default();
-        for entry in entries.flatten() {
-            let name = entry.file_name();
-            lowercase.insert(name.as_encoded_bytes().to_ascii_lowercase());
+        let mut non_ascii = false;
+        for entry in std::fs::read_dir(dir).ok()? {
+            let name = entry.ok()?.file_name();
+            let bytes = name.as_encoded_bytes();
+            non_ascii |= !bytes.is_ascii();
+            lowercase.insert(bytes.to_ascii_lowercase());
             names.insert(name);
         }
-        Some(Self { names, lowercase })
+        Some(Self {
+            names,
+            lowercase,
+            non_ascii,
+        })
     }
 
     /// Whether no entry can match `name` on any filesystem: neither its exact
-    /// spelling nor, for an ASCII name, one that differs only in case. A
-    /// non-ASCII name keeps its stat, since a normalization-insensitive
-    /// filesystem matches more than case.
+    /// spelling nor, for an ASCII name among ASCII entries, one that differs
+    /// only in case. Everything else keeps its stat: a non-ASCII name, since a
+    /// normalization-insensitive filesystem matches more than case; an ASCII
+    /// name beside non-ASCII entries, since case folding can match it to one
+    /// of them; and on Windows a name with a `~`, which could be the 8.3 alias
+    /// of a listed long name.
     fn lacks(&self, name: &OsStr) -> bool {
         if self.names.contains(name) {
             return false;
         }
         let bytes = name.as_encoded_bytes();
-        bytes.is_ascii() && !self.lowercase.contains(&bytes.to_ascii_lowercase())
+        if !bytes.is_ascii() || self.non_ascii || (cfg!(windows) && bytes.contains(&b'~')) {
+            return false;
+        }
+        !self.lowercase.contains(&bytes.to_ascii_lowercase())
     }
 }
 
