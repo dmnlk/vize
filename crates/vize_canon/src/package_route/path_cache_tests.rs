@@ -128,3 +128,13 @@ fn probes_that_differ_only_in_case_or_normalization_keep_their_stat() {
         );
     }
 }
+
+#[test]
+fn windows_alias_spellings_keep_their_stat() {
+    for name in ["LONGFI~1.TS", "Index.ts.", "Index.ts ", "Index.ts:stream"] {
+        assert!(super::may_alias_on_windows(name.as_bytes()), "{name}");
+    }
+    for name in ["Index.ts", "index.d.ts", ".gitignore", "a b.ts"] {
+        assert!(!super::may_alias_on_windows(name.as_bytes()), "{name}");
+    }
+}

@@ -120,18 +120,27 @@ impl DirectoryListing {
     /// only in case. Everything else keeps its stat: a non-ASCII name, since a
     /// normalization-insensitive filesystem matches more than case; an ASCII
     /// name beside non-ASCII entries, since case folding can match it to one
-    /// of them; and on Windows a name with a `~`, which could be the 8.3 alias
-    /// of a listed long name.
+    /// of them; and on Windows a spelling that can open a listed entry under
+    /// another name.
     fn lacks(&self, name: &OsStr) -> bool {
         if self.names.contains(name) {
             return false;
         }
         let bytes = name.as_encoded_bytes();
-        if !bytes.is_ascii() || self.non_ascii || (cfg!(windows) && bytes.contains(&b'~')) {
+        if !bytes.is_ascii() || self.non_ascii || (cfg!(windows) && may_alias_on_windows(bytes)) {
             return false;
         }
         !self.lowercase.contains(&bytes.to_ascii_lowercase())
     }
+}
+
+/// Whether Windows could open a listed entry through this spelling: an 8.3
+/// alias (`LONGFI~1.TS` for `Longfilename1.ts`), a name with trailing dots or
+/// spaces, which Win32 strips before the lookup, or a stream suffix after `:`.
+fn may_alias_on_windows(name: &[u8]) -> bool {
+    name.contains(&b'~')
+        || name.contains(&b':')
+        || name.last().is_some_and(|last| matches!(last, b'.' | b' '))
 }
 
 #[derive(Default)]
