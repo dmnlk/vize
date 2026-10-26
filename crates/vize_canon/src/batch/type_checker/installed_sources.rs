@@ -113,18 +113,19 @@ fn is_installed_source(project_root: &Path, path: &Path) -> bool {
         )
 }
 
-/// The directory before the first `node_modules` segment exists in either
-/// spelling. Canonicalizing only that much keeps a logical link root
-/// (`node_modules/selected` -> elsewhere) below its project root.
+/// Every `node_modules` segment is tried, so a project that itself lives
+/// below a `node_modules` directory still owns the files below its own one.
+/// The directory before a segment exists in either spelling. Canonicalizing
+/// only that much keeps a logical link root (`node_modules/selected` ->
+/// elsewhere) below its project root.
 fn installed_below_root(project_root: &Path, path: &Path) -> bool {
-    let Some(installed_at) = path
-        .components()
-        .position(|part| is_node_modules_component(part.as_os_str()))
-    else {
-        return false;
-    };
-    let prefix = path.components().take(installed_at).collect::<PathBuf>();
-    vize_carton::path::canonicalize_non_verbatim(&prefix).starts_with(project_root)
+    path.components()
+        .enumerate()
+        .filter(|(_, part)| is_node_modules_component(part.as_os_str()))
+        .any(|(installed_at, _)| {
+            let prefix = path.components().take(installed_at).collect::<PathBuf>();
+            vize_carton::path::canonicalize_non_verbatim(&prefix).starts_with(project_root)
+        })
 }
 
 #[cfg(test)]
@@ -407,6 +408,21 @@ mod tests {
         ] {
             assert!(
                 !super::is_installed_source(root, Path::new(external)),
+                "{external}"
+            );
+        }
+        // A project below a `node_modules` directory still owns its own one.
+        let nested_root = Path::new("/workspace/node_modules/my-app");
+        assert!(super::is_installed_source(
+            nested_root,
+            Path::new("/workspace/node_modules/my-app/node_modules/vue/index.d.ts"),
+        ));
+        for external in [
+            "/workspace/node_modules/other/index.ts",
+            "/workspace/node_modules/.pnpm/vue@3.5.0/node_modules/vue/index.d.ts",
+        ] {
+            assert!(
+                !super::is_installed_source(nested_root, Path::new(external)),
                 "{external}"
             );
         }
