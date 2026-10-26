@@ -1,6 +1,10 @@
+use std::path::PathBuf;
+
+use vize_canon::PackageRouteResolver;
+use vize_l0::{FxHashMap, String};
+
 use super::cache::{PackageLookupCache, ResolutionContextCache};
 use super::registration::VirtualRegistrationCache;
-use vize_canon::PackageRouteResolver;
 
 /// Memo state shared by all import walks for one check program.
 #[derive(Default)]
@@ -8,6 +12,9 @@ pub(in crate::commands::check) struct LocalImportSession {
     pub(super) registration_cache: VirtualRegistrationCache,
     pub(super) resolution_contexts: ResolutionContextCache,
     pub(super) package_lookups: PackageLookupCache,
+    /// `paths` alias targets, shared by the import walk and every
+    /// registration closure it scans.
+    pub(super) alias_targets: FxHashMap<String, Option<PathBuf>>,
     /// Fires once per uncached package lookup. Tests use it to show two
     /// independent specifiers overlap instead of taking one serial turn.
     #[cfg(test)]

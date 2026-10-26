@@ -6,7 +6,10 @@ use vize_canon::PackageRouteResolver;
 
 use super::super::super::imports_aliases::PathAliasResolver;
 use super::super::super::path_cache::CanonicalPathCache;
-use super::super::{LocalImportSession, collect_transitive_local_imports_with_session};
+use super::super::{
+    ImportFileOptions, LocalImportSession, collect_transitive_local_imports_with_session,
+    registration,
+};
 
 static PACKAGE_IN_FLIGHT: AtomicUsize = AtomicUsize::new(0);
 static PACKAGE_MAX: AtomicUsize = AtomicUsize::new(0);
@@ -143,4 +146,102 @@ fn frontier_collects_the_same_files_and_overlaps_independent_packages() {
     assert_eq!(sorted(again.authored), authored);
     assert_eq!(PACKAGE_ENTERED.load(Ordering::SeqCst), entered);
     assert_eq!(PATH_LOOKUPS.load(Ordering::SeqCst), path_lookups);
+}
+
+static CLOSURE_PACKAGE_LOOKUPS: AtomicUsize = AtomicUsize::new(0);
+
+fn note_closure_package_lookup() {
+    CLOSURE_PACKAGE_LOOKUPS.fetch_add(1, Ordering::SeqCst);
+}
+
+fn write_pkg(base: &Path) {
+    write(
+        base,
+        "node_modules/pkg/package.json",
+        r#"{"name":"pkg","exports":{".":{"types":"./index.d.ts"}}}"#,
+    );
+    write(
+        base,
+        "node_modules/pkg/index.d.ts",
+        "export interface Public { value: string }\n",
+    );
+}
+
+#[test]
+fn frontier_looks_ahead_through_relative_edges_before_the_walk_reaches_them() {
+    let root = tempfile::tempdir().unwrap();
+    let base = root.path();
+    let entry = write(base, "src/entry.ts", "import './a';\n");
+    write(base, "src/a.ts", "import './nested/b';\n");
+    write(
+        base,
+        "src/nested/b.ts",
+        "import type { Public } from 'pkg';\nexport type B = Public;\n",
+    );
+    write_pkg(base);
+
+    let mut packages = PackageRouteResolver::default();
+    let mut canonical_paths = CanonicalPathCache::default();
+    let mut session = LocalImportSession::new(&mut packages);
+    let entry = canonical_paths.canonicalize(&entry);
+    super::prepare_frontier(
+        &entry,
+        &[],
+        &mut session,
+        &packages,
+        None,
+        ImportFileOptions::from(false),
+        &mut canonical_paths,
+    );
+
+    assert_eq!(
+        session.module_specifier_entries(),
+        3,
+        "one frontier reads entry, a and b"
+    );
+    assert_eq!(
+        session.package_lookup_entries(),
+        1,
+        "b's package import resolves before the walk pops b"
+    );
+    assert_eq!(packages.metrics().cache_misses, 1);
+}
+
+#[test]
+fn registration_closure_resolves_its_package_imports_with_the_frontier() {
+    CLOSURE_PACKAGE_LOOKUPS.store(0, Ordering::SeqCst);
+    let root = tempfile::tempdir().unwrap();
+    let base = root.path();
+    let barrel = write(base, "lib/barrel.ts", "export * from './leaf';\n");
+    write(
+        base,
+        "lib/leaf.ts",
+        "import type { Public } from 'pkg';\nexport type Leaf = Public;\n",
+    );
+    write_pkg(base);
+
+    let mut packages = PackageRouteResolver::default();
+    let mut canonical_paths = CanonicalPathCache::default();
+    let mut session = LocalImportSession::new(&mut packages);
+    session.package_lookup_probe = Some(note_closure_package_lookup);
+    let barrel = canonical_paths.canonicalize(&barrel);
+    let mut discovery = registration::VirtualRegistrationDiscovery::default();
+    let needs_registration = registration::non_relative_import_needs_virtual_registration(
+        &barrel,
+        &mut canonical_paths,
+        ImportFileOptions::from(false),
+        None,
+        Some(&mut packages),
+        &mut session,
+        &mut discovery,
+    );
+
+    assert!(!needs_registration, "the closure reaches no Vue source");
+    assert_eq!(
+        CLOSURE_PACKAGE_LOOKUPS.load(Ordering::SeqCst),
+        1,
+        "leaf's package import went through the frontier, off the serial path"
+    );
+    assert_eq!(session.package_lookup_entries(), 1);
+    assert_eq!(packages.metrics().cache_misses, 1);
 }
