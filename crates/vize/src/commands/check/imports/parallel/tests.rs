@@ -245,3 +245,51 @@ fn registration_closure_resolves_its_package_imports_with_the_frontier() {
     assert_eq!(session.package_lookup_entries(), 1);
     assert_eq!(packages.metrics().cache_misses, 1);
 }
+
+#[test]
+fn alias_targets_stay_with_the_configuration_that_resolved_them() {
+    let case = tempfile::tempdir().unwrap();
+    let base = case.path().canonicalize().unwrap();
+    let left_target = write(&base, "left/src/x.ts", "export const x = 1;\n");
+    let right_target = write(&base, "right/src/x.ts", "export const x = 2;\n");
+    let left_main = write(&base, "left/main.ts", "import { x } from '@/x';\n");
+    let right_main = write(&base, "right/main.ts", "import { x } from '@/x';\n");
+    for side in ["left", "right"] {
+        write(
+            &base,
+            &format!("{side}/tsconfig.json"),
+            r#"{"compilerOptions":{"baseUrl":".","paths":{"@/*":["src/*"]}}}"#,
+        );
+    }
+    let left = PathAliasResolver::from_tsconfig(Some(&base.join("left/tsconfig.json")));
+    let right = PathAliasResolver::from_tsconfig(Some(&base.join("right/tsconfig.json")));
+    let mut packages = PackageRouteResolver::default();
+    let mut session = LocalImportSession::new(&mut packages);
+    let mut canonical_paths = CanonicalPathCache::default();
+
+    let first = collect_transitive_local_imports_with_session(
+        &[left_main],
+        &base,
+        &mut canonical_paths,
+        false,
+        Some(&left),
+        &mut packages,
+        &mut session,
+    );
+    let second = collect_transitive_local_imports_with_session(
+        &[right_main],
+        &base,
+        &mut canonical_paths,
+        false,
+        Some(&right),
+        &mut packages,
+        &mut session,
+    );
+
+    assert_eq!(sorted(first.authored), vec![left_target]);
+    assert_eq!(
+        sorted(second.authored),
+        vec![right_target],
+        "a walk under another `paths` configuration must not reuse the first walk's `@/x`"
+    );
+}

@@ -12,7 +12,7 @@ use vize_l0::{FxHashMap, FxHashSet, String};
 
 use super::super::imports_aliases::PathAliasResolver;
 use super::super::path_cache::CanonicalPathCache;
-use super::session::LocalImportSession;
+use super::session::{AliasScope, LocalImportSession};
 use super::specifiers::{
     ModuleSpecifierOccurrence, extract_module_specifier_occurrences, is_relative_specifier,
 };
@@ -68,12 +68,13 @@ pub(super) fn prepare_frontier(
     // children. Only caches fill here; the serial walk keeps its order and
     // every decision.
     let mut seen = wave.iter().cloned().collect::<FxHashSet<_>>();
+    let scope = AliasScope::new(aliases, options);
     let mut prepared = 0;
     while !wave.is_empty() && prepared < LOOKAHEAD_FILES {
         prepared += wave.len();
         prefetch_specifiers(&wave, session);
         prepare_pending(&wave, session, Some(packages), aliases, options);
-        wave = next_wave(&wave, session, options, canonical_paths, &mut seen);
+        wave = next_wave(&wave, session, scope, options, canonical_paths, &mut seen);
     }
 }
 
@@ -87,15 +88,17 @@ pub(super) fn prepare_pending(
     options: ImportFileOptions,
 ) {
     let bare = bare_imports(pending, session);
+    let scope = AliasScope::new(aliases, options);
     if let Some(aliases) = aliases {
-        resolve_alias_misses(&bare, aliases, options, session);
+        resolve_alias_misses(&bare, aliases, options, scope, session);
     }
     let Some(packages) = packages else {
         return;
     };
+    let alias_targets = session.alias_targets(scope);
     let package_imports = bare
         .into_iter()
-        .filter(|import| !alias_hit(&session.alias_targets, &import.specifier))
+        .filter(|import| !alias_hit(alias_targets, &import.specifier))
         .filter(|import| !vize_canon::batch::is_vue_runtime_support_specifier(&import.specifier))
         .collect::<Vec<_>>();
     resolve_context_misses(&package_imports, session, packages, aliases);
@@ -107,6 +110,7 @@ pub(super) fn prepare_pending(
 fn next_wave(
     wave: &[PathBuf],
     session: &LocalImportSession,
+    scope: AliasScope,
     options: ImportFileOptions,
     canonical_paths: &mut CanonicalPathCache,
     seen: &mut FxHashSet<PathBuf>,
@@ -139,7 +143,10 @@ fn next_wave(
             if Path::new(specifier).is_absolute() {
                 continue;
             }
-            if let Some(Some(target)) = session.alias_targets.get(specifier) {
+            if let Some(Some(target)) = session
+                .alias_targets(scope)
+                .and_then(|targets| targets.get(specifier))
+            {
                 consider(target.clone(), session, seen, &mut next);
                 continue;
             }
@@ -266,9 +273,9 @@ fn is_bare_specifier(specifier: &str) -> bool {
     !is_relative_specifier(specifier) && !Path::new(specifier).is_absolute()
 }
 
-fn alias_hit(alias_targets: &FxHashMap<String, Option<PathBuf>>, specifier: &str) -> bool {
+fn alias_hit(alias_targets: Option<&FxHashMap<String, Option<PathBuf>>>, specifier: &str) -> bool {
     alias_targets
-        .get(specifier)
+        .and_then(|targets| targets.get(specifier))
         .and_then(Option::as_ref)
         .is_some()
 }
@@ -277,12 +284,14 @@ fn resolve_alias_misses(
     imports: &[BareImport],
     aliases: &PathAliasResolver,
     options: ImportFileOptions,
+    scope: AliasScope,
     session: &mut LocalImportSession,
 ) {
     let mut seen = FxHashSet::default();
     let mut missing = Vec::new();
+    let cached = session.alias_targets(scope);
     for import in imports {
-        if session.alias_targets.contains_key(&import.specifier)
+        if cached.is_some_and(|targets| targets.contains_key(&import.specifier))
             || !seen.insert(import.specifier.clone())
         {
             continue;
@@ -303,8 +312,9 @@ fn resolve_alias_misses(
         );
         (specifier, resolved)
     });
+    let targets = session.alias_targets_mut(scope);
     for (specifier, resolved) in resolved {
-        session.alias_targets.entry(specifier).or_insert(resolved);
+        targets.entry(specifier).or_insert(resolved);
     }
 }
 

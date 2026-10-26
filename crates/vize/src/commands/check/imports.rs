@@ -158,6 +158,7 @@ pub(super) fn collect_transitive_local_imports_with_session(
     session: &mut LocalImportSession,
 ) -> TransitiveLocalImports {
     let options = options.into();
+    let alias_scope = self::session::AliasScope::new(aliases, options);
     let mut visited: FxHashSet<PathBuf> = FxHashSet::default();
     let mut registered: FxHashSet<PathBuf> = FxHashSet::default();
     let mut queue: Vec<(PathBuf, bool, bool)> = Vec::new();
@@ -223,7 +224,7 @@ pub(super) fn collect_transitive_local_imports_with_session(
             } else {
                 let aliased = aliases.and_then(|aliases| {
                     session
-                        .alias_targets
+                        .alias_targets_mut(alias_scope)
                         .entry(specifier.clone())
                         .or_insert_with(|| {
                             aliases.resolve(

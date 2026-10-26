@@ -1,6 +1,6 @@
 use rayon::prelude::*;
 
-use super::super::session::LocalImportSession;
+use super::super::session::{AliasScope, LocalImportSession};
 use super::{
     CanonicalPathCache, ImportFileOptions, Path, PathAliasResolver, RegistrationFrontier,
     extract_module_specifier_occurrences, is_declaration_file, is_relative_specifier,
@@ -17,6 +17,7 @@ pub(super) fn source_needs_virtual_registration(
     discovered_routes: &mut Vec<vize_canon::PackageRouteBinding>,
 ) -> bool {
     let mut needs_registration = false;
+    let alias_scope = AliasScope::new(aliases, options);
     while let Some(file) = frontier.queue.pop() {
         if !frontier.visited.insert(file.clone()) {
             continue;
@@ -106,8 +107,21 @@ pub(super) fn source_needs_virtual_registration(
             } else if candidate.is_absolute() {
                 resolve_import_base(candidate, canonical_paths, options)
             } else {
+                // The frontier resolved most of these already; a miss resolves
+                // once and stays for the walk and the other closures.
                 let aliased = aliases.and_then(|aliases| {
-                    aliases.resolve(&specifier, canonical_paths, options, resolve_import_base)
+                    session
+                        .alias_targets_mut(alias_scope)
+                        .entry(specifier.clone())
+                        .or_insert_with(|| {
+                            aliases.resolve(
+                                &specifier,
+                                canonical_paths,
+                                options,
+                                resolve_import_base,
+                            )
+                        })
+                        .clone()
                 });
                 if aliased.is_some() {
                     aliased
