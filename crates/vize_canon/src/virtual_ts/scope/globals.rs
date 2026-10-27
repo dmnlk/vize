@@ -15,6 +15,7 @@ use super::context::ScopeGenerationOptions;
 
 mod authored_ranges;
 mod instance;
+mod loop_sources;
 pub(super) use instance::generate_instance_global_refs;
 mod member_root;
 mod strict_candidate;
@@ -81,6 +82,11 @@ pub(super) fn generate_undefined_refs(
     let resolve_on_public_instance = !resolve_on_instance
         && !options.legacy_vue2
         && !options.virtual_ts_options.strict_instance_globals;
+    let undefined_refs = if resolve_on_public_instance {
+        loop_sources::authored_references(summary, undefined_refs)
+    } else {
+        undefined_refs
+    };
     let script_content = options.script_content;
     // Names the script declares itself resolve from an enclosing scope of the
     // template closure even when the analyzer never tracked them as bindings

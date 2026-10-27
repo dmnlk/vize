@@ -336,14 +336,17 @@ fn corpus_roots(roots: &std::ffi::OsStr) -> std::io::Result<Planes> {
         } else {
             root
         };
-        assert!(
-            root.is_dir(),
-            "VIZE_DAVINCI_FACT_CORPUS must name directories: {}",
-            root.display()
-        );
+        if !root.is_dir() {
+            return Err(std::io::Error::other(vize_carton::cstr!(
+                "VIZE_DAVINCI_FACT_CORPUS must name directories: {}",
+                root.display()
+            )));
+        }
         collect_vue_files(&root, &mut files)?;
     }
-    assert!(!files.is_empty(), "corpus shard found no .vue files");
+    if files.is_empty() {
+        return Err(std::io::Error::other("corpus shard found no .vue files"));
+    }
     let mut shard = Planes::default();
     for file in &files {
         let Ok(source) = std::fs::read_to_string(file) else {

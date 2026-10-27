@@ -437,3 +437,48 @@ fn project_diagnostics(
     snapshot.sort();
     snapshot
 }
+
+/// Full native diagnostics prove both repeated missing reads remain errors,
+/// while the current loop alias cannot hide an augmented iterable property.
+#[test]
+fn loop_sources_keep_authored_reads_and_parent_scope() {
+    if resolve_test_tsgo_binary().is_none() {
+        assert!(
+            std::env::var_os("VIZE_TEST_REQUIRE_TSGO").is_none(),
+            "native loop-source regression requires the checker"
+        );
+        return;
+    }
+    let augmentation = r#"import 'vue';
+declare module 'vue' { interface ComponentCustomProperties { item: number[] } }
+"#;
+    let source = r#"<script setup lang="ts">
+const label = 'x'
+</script>
+<template>
+  <i v-for="item in item" :key="item">{{ item.toFixed() }}</i>
+  <i v-for="entry in (missing || missing)" :key="entry">{{ entry }}</i>
+</template>
+"#;
+    let root = create_project_case(
+        "loop-source-authored-reads",
+        &[("src/mixin.d.ts", augmentation), ("src/Loop.vue", source)],
+    );
+    let diagnostics = project_diagnostics(&root, false);
+    assert_eq!(
+        diagnostics,
+        vec![
+            (
+                "src/Loop.vue".into(),
+                Some(2339),
+                "6:22: Property 'missing' does not exist on the component instance.".into()
+            ),
+            (
+                "src/Loop.vue".into(),
+                Some(2339),
+                "6:33: Property 'missing' does not exist on the component instance.".into()
+            ),
+        ]
+    );
+    let _ = std::fs::remove_dir_all(&root);
+}

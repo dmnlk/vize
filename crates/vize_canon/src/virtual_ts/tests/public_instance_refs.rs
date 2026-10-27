@@ -200,3 +200,58 @@ fn script_setup_with_no_unknown_name_emits_no_instance_prelude() {
     assert_eq!(count_lines(&code, PRELUDE), 0, "{code}");
     assert_eq!(count_lines(&code, INSTANCE), 0, "{code}");
 }
+
+/// Loop aliases become visible only after evaluating their iterable. Repeated
+/// names, including names also used as aliases, keep separate authored owners.
+#[test]
+fn loop_sources_keep_each_read_and_exclude_the_current_alias() {
+    for template in [
+        r#"<i v-for="missing in (missing || missing)" :key="missing">{{ missing }}</i>"#,
+        r#"<i v-for="entry in ('日本語 missing' && /* missing */ missing || missing)" :key="entry">{{ entry }}</i>"#,
+    ] {
+        let (code, spans) = setup_output("", template, &VirtualTsOptions::default());
+        parses(&code);
+        assert_eq!(
+            count_lines(&code, "  void (__vize_public_instance.missing);"),
+            2,
+            "{code}"
+        );
+        let iterable_start = template.find(" in ").expect("loop source") + " in ".len();
+        let iterable_end =
+            template[iterable_start..].find('"').expect("source end") + iterable_start;
+        let source = &template[iterable_start..iterable_end];
+        // The last two spellings are the authored reads; earlier spellings
+        // belong to a literal/comment and must never own their mappings.
+        let last = source.rfind("missing").expect("second authored read");
+        let first = source[..last]
+            .rfind("missing")
+            .expect("first authored read");
+        let expected = vec![iterable_start + first, iterable_start + last];
+        let actual: Vec<_> = spans
+            .iter()
+            .filter(|mapping| {
+                code.get(..mapping.gen_range.start)
+                    .is_some_and(|head| head.ends_with("__vize_public_instance."))
+            })
+            .map(|mapping| mapping.src_range.start)
+            .collect();
+        assert_eq!(actual, expected, "{template}: {spans:?}\n{code}");
+    }
+}
+
+#[test]
+fn nested_loop_sources_keep_the_outer_alias_visible() {
+    let template = r#"<section v-for="item in rows"><i v-for="item in item" :key="item">{{ item }}</i></section>"#;
+    let (code, _) = setup_output("", template, &VirtualTsOptions::default());
+    parses(&code);
+    assert_eq!(
+        count_lines(&code, "  void (__vize_public_instance.rows);"),
+        1,
+        "{code}"
+    );
+    assert_eq!(
+        count_lines(&code, "  void (__vize_public_instance.item);"),
+        0,
+        "{code}"
+    );
+}

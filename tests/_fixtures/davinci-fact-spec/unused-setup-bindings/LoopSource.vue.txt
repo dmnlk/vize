@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const colors = ['pink', 'red', 'cyan']
 const unusedLabel = 'never read by the template'
-const unusedCount = colors.length
+const unusedCount = 0
 </script>
 
 <template>
