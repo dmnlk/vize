@@ -143,6 +143,21 @@ fn custom_property_member_types_and_native_type_queries_remain_exact() {
         .expect("materialized production projection");
     assert_eq!(generated, projected.content.as_str());
     let (materialized_root, config) = checker.native_project_paths_for_test();
+    let whole_diagnostics: Vec<_> = checked
+        .diagnostics
+        .iter()
+        .map(|diagnostic| {
+            serde_json::json!({
+                "file": diagnostic.file,
+                "line": diagnostic.line,
+                "column": diagnostic.column,
+                "message": diagnostic.message,
+                "code": diagnostic.code,
+                "severity": diagnostic.severity,
+                "blockType": diagnostic.block_type.as_ref().map(|block| cstr!("{block:?}")),
+            })
+        })
+        .collect();
     let packet = serde_json::json!({
         "native": native,
         "wholeAuthoredSource": MEMBER_SETUP,
@@ -151,7 +166,7 @@ fn custom_property_member_types_and_native_type_queries_remain_exact() {
         "wholeGeneratedSource": generated,
         "configPath": config,
         "wholeConfig": std::fs::read_to_string(&config).expect("materialized config"),
-        "wholeDiagnostics": checked.diagnostics,
+        "wholeDiagnostics": whole_diagnostics,
     });
     retain_member_packet("before-type-queries", &packet);
     let file_wire = projected.virtual_path.display().to_string();
@@ -186,7 +201,7 @@ fn custom_property_member_types_and_native_type_queries_remain_exact() {
             for (kind, offset) in [("lexical", declaration), ("instance", instance_read)] {
                 let position = u32::try_from(offset).expect("native query position");
                 let record = session
-                    .get_type_at_position(&file_wire, position)
+                    .get_type_at_position(file_wire.as_str(), position)
                     .await
                     .expect("native member type query should complete")
                     .expect("native member type should exist");
@@ -286,7 +301,7 @@ function stringOnly(value: string) { return value }
             &serde_json::json!({
                 "wholeAuthoredSource": CALLS,
                 "wholeAugmentation": augmentation,
-                "wholeDiagnostics": actual,
+                "exactDiagnosticSnapshot": actual,
             }),
         );
         let mut expected: Vec<(String, Option<u32>, String)> = vec![(
