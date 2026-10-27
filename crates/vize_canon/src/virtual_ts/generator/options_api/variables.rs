@@ -1,7 +1,8 @@
 //! Authored mappings for generated Options API template bindings.
 
 use super::{OptionsApiScriptFacts, is_safe_value_identifier, unresolved_extends_template_names};
-use crate::virtual_ts::helpers::{is_reserved_identifier, to_safe_identifier};
+use crate::virtual_ts::component_reference::options_api_reserved_binding_local;
+use crate::virtual_ts::helpers::is_reserved_identifier;
 use crate::virtual_ts::{VirtualTsOptions, VizeMapping, VizeSemanticLink, VizeSemanticLinkKind};
 use vize_carton::{FxHashSet, String, append};
 use vize_croquis::{BindingType, Croquis};
@@ -91,7 +92,7 @@ pub(in crate::virtual_ts::generator) fn generate_options_api_variables(
             // binding), so the name also gets the safe local the
             // `<script setup>` projection declares for it: `<component
             // :is="as">` resolves `typeof _as` exactly as it does there.
-            let local = to_safe_identifier(name);
+            let local = options_api_reserved_binding_local(summary, options, name);
             append!(
                 ts,
                 "  const {local}: __VizeOptionsBinding<typeof __default__, \"{name}\"> = (void 0) as any; void {local};\n"

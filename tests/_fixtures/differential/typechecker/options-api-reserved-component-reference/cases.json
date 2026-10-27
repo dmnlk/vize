@@ -59,6 +59,24 @@
           "message": "Property 'nope' does not exist on type 'string'."
         }
       ]
+    },
+    {
+      "id": "reserved-prop-authored-local-collision",
+      "inputs": [
+        {
+          "file": "tsconfig.json",
+          "source": "tsconfig.json.txt"
+        },
+        {
+          "file": "src/Heading.vue",
+          "source": "src/HeadingCollision.vue.txt"
+        },
+        {
+          "file": "src/Page.vue",
+          "source": "src/Page.vue.txt"
+        }
+      ],
+      "diagnostics": []
     }
   ]
 }

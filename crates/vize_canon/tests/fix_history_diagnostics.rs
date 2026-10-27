@@ -1121,6 +1121,7 @@ fn options_api_reserved_props_resolve_dynamic_component_references() {
         &[
             "reserved-prop-dynamic-component",
             "reserved-prop-dynamic-component-wrong-member",
+            "reserved-prop-authored-local-collision",
         ],
     );
 }

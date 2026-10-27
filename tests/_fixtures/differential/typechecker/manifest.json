@@ -5657,7 +5657,7 @@
       },
       "packReference": {
         "path": "options-api-reserved-component-reference/cases.json",
-        "sha256": "2135c64c416d59b4a14517ded00a69ed318c872ba56e3146ad55e00e0e3d2456"
+        "sha256": "a4682d2de6f99c3e27b86364e9780b554b5365fb1d9dac1cfbdb05f102c6a12b"
       },
       "inputs": [
         {
@@ -5713,7 +5713,7 @@
       },
       "packReference": {
         "path": "options-api-reserved-component-reference/cases.json",
-        "sha256": "2135c64c416d59b4a14517ded00a69ed318c872ba56e3146ad55e00e0e3d2456"
+        "sha256": "a4682d2de6f99c3e27b86364e9780b554b5365fb1d9dac1cfbdb05f102c6a12b"
       },
       "inputs": [
         {
@@ -5752,6 +5752,62 @@
           "message": "Property 'nope' does not exist on type 'string'."
         }
       ]
+    },
+    {
+      "id": "typechecker/options-api-reserved-component-reference/reserved-prop-authored-local-collision",
+      "state": "active",
+      "targets": [
+        "batch"
+      ],
+      "adapters": {
+        "legacy": "batch-typechecker-fixture-v1",
+        "native": null
+      },
+      "pack": "options-api-reserved-component-reference",
+      "case": "reserved-prop-authored-local-collision",
+      "test": "options_api_reserved_props_resolve_dynamic_component_references",
+      "regressionCommit": "482dd05d23ac9d1bec4065608dd8fe562a11b3b0",
+      "sourceRevision": "482dd05d23ac9d1bec4065608dd8fe562a11b3b0",
+      "checkerOptions": {
+        "optionsApi": true
+      },
+      "packReference": {
+        "path": "options-api-reserved-component-reference/cases.json",
+        "sha256": "a4682d2de6f99c3e27b86364e9780b554b5365fb1d9dac1cfbdb05f102c6a12b"
+      },
+      "inputs": [
+        {
+          "file": "tsconfig.json",
+          "path": "options-api-reserved-component-reference/tsconfig.json.txt",
+          "sha256": "e36b280dce185f4be85cbff1838c0ee06d8d7a46b38b3e63df995c0decd7b13b"
+        },
+        {
+          "file": "src/Heading.vue",
+          "path": "options-api-reserved-component-reference/src/HeadingCollision.vue.txt",
+          "sha256": "37d957d7044cbfdc26bef362b7d11b2f5da17ac958098026171932c237f62a1d"
+        },
+        {
+          "file": "src/Page.vue",
+          "path": "options-api-reserved-component-reference/src/Page.vue.txt",
+          "sha256": "f030edba4e98e93d8eb6637bbb0ec69f736ac903c2b4b71db2be6cc26e1fff82"
+        }
+      ],
+      "dialectCoverage": {
+        "state": "source-inspected",
+        "registryRef": null,
+        "evidence": [
+          {
+            "kind": "source-inspection",
+            "dialects": [
+              "vue3-sfc",
+              "html-template",
+              "ts"
+            ],
+            "selector": "batch-typechecker-fixture-v1 pinned authored sources"
+          }
+        ]
+      },
+      "diagnostics": []
     },
     {
       "id": "typechecker/package-target-deletion-refresh/missing-target",
