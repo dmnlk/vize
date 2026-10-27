@@ -99,7 +99,7 @@ fn component_binding_reference_for_summary_binding(
     binding_type: BindingType,
     options: &VirtualTsOptions,
 ) -> String {
-    if options.options_api && is_reserved_identifier(candidate) {
+    if is_reserved_identifier(candidate) && !super::script_facts::is_script_setup(summary) {
         return options_api_reserved_binding_local(summary, options, candidate);
     }
     if matches!(binding_type, BindingType::Props | BindingType::PropsAliased)
