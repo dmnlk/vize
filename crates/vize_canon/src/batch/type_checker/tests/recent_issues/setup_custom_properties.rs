@@ -471,12 +471,12 @@ const label = 'x'
             (
                 "src/Loop.vue".into(),
                 Some(2339),
-                "6:22: Property 'missing' does not exist on the component instance.".into()
+                "6:23: Property 'missing' does not exist on the component instance.".into()
             ),
             (
                 "src/Loop.vue".into(),
                 Some(2339),
-                "6:33: Property 'missing' does not exist on the component instance.".into()
+                "6:34: Property 'missing' does not exist on the component instance.".into()
             ),
         ]
     );

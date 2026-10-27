@@ -5,7 +5,7 @@
 //! Canon needs each authored read to own a separate diagnostic and mapping.
 
 use vize_carton::FxHashSet;
-use vize_croquis::{Croquis, ScopeData, UndefinedRef, extract_identifier_refs_oxc};
+use vize_croquis::{Croquis, ScopeData, UndefinedRef, analyzer::extract_identifier_refs_oxc};
 
 pub(super) fn authored_references(
     summary: &Croquis,
