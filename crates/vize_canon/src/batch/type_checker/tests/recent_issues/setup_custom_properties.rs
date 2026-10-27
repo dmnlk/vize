@@ -205,6 +205,7 @@ fn custom_property_member_types_and_native_type_queries_remain_exact() {
                     .await
                     .expect("native member type query should complete")
                     .expect("native member type should exist");
+                let whole_record = cstr!("{record:#?}");
                 let rendered = session
                     .type_to_string(record.id, None, None)
                     .await
@@ -213,7 +214,7 @@ fn custom_property_member_types_and_native_type_queries_remain_exact() {
                     "name": name,
                     "kind": kind,
                     "position": position,
-                    "wholeRecord": cstr!("{record:#?}"),
+                    "wholeRecord": whole_record,
                     "type": rendered,
                     "expected": expected,
                 }));
