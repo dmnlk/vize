@@ -158,7 +158,7 @@ pub(crate) fn options_api_reserved_binding_local(
             || options
                 .external_template_bindings
                 .iter()
-                .any(|binding| binding == &local)
+                .any(|binding| binding.as_str() == local.as_str())
         {
             local.push('_');
         }

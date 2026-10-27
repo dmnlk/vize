@@ -23,8 +23,10 @@ fn reserved_component_local_does_not_collide_with_authored_or_configured_names()
             "_as___",
         ),
     ] {
-        let mut options = crate::virtual_ts::VirtualTsOptions::default();
-        options.template_globals = globals;
+        let options = VirtualTsOptions {
+            template_globals: globals,
+            ..Default::default()
+        };
         let output = generate_virtual_ts_with_offsets_options_api(
             &summary,
             Some(script),
