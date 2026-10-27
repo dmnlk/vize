@@ -251,6 +251,63 @@ fn custom_property_member_types_and_native_type_queries_remain_exact() {
     assert_eq!(diagnostics, expected);
     drop(checker);
     let _ = std::fs::remove_dir_all(&project_root);
+    assert_member_mutation_matrix();
+}
+
+fn assert_member_mutation_matrix() {
+    const CALLS: &str = r#"<script setup lang="ts">
+function booleanOnly(value: boolean) { return value }
+function stringOnly(value: string) { return value }
+</script>
+<template>
+<p>{{ booleanOnly(isSP) }}</p>
+<p>{{ stringOnly(isSP) }}</p>
+<p>{{ missing }}</p>
+</template>
+"#;
+    for (member_type, errors) in [
+        ("boolean", vec![(7, 18, "string")]),
+        ("string", vec![(6, 19, "boolean")]),
+        ("unknown", vec![(6, 19, "boolean"), (7, 18, "string")]),
+        ("any", vec![]),
+    ] {
+        let augmentation =
+            MEMBER_AUGMENTATION.replace("isSP: boolean;", &cstr!("isSP: {member_type};"));
+        let project_root = create_project_case(
+            &cstr!("setup-custom-property-mutation-{member_type}"),
+            &[
+                ("src/mixin.d.ts", &augmentation),
+                ("src/Mutation.vue", CALLS),
+            ],
+        );
+        let actual = project_diagnostics(&project_root, false);
+        retain_member_packet(
+            &cstr!("mutation-{member_type}"),
+            &serde_json::json!({
+                "wholeAuthoredSource": CALLS,
+                "wholeAugmentation": augmentation,
+                "wholeDiagnostics": actual,
+            }),
+        );
+        let mut expected: Vec<(String, Option<u32>, String)> = vec![(
+            "src/Mutation.vue".into(),
+            Some(2339),
+            "8:7: Property 'missing' does not exist on the component instance.".into(),
+        )];
+        for (line, column, parameter_type) in errors {
+            expected.push((
+                "src/Mutation.vue".into(),
+                Some(2345),
+                cstr!("{line}:{column}: Argument of type '{member_type}' is not assignable to parameter of type '{parameter_type}'."),
+            ));
+        }
+        expected.sort();
+        assert_eq!(
+            actual, expected,
+            "member declaration mutation: {member_type}"
+        );
+        let _ = std::fs::remove_dir_all(&project_root);
+    }
 }
 
 fn retain_member_packet(name: &str, packet: &serde_json::Value) {
