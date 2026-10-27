@@ -245,3 +245,35 @@ fn editor_reference_paths_are_literal_and_deduplicated() {
         output.code,
     );
 }
+
+/// An empty `v-slot` expression (`<template #text="">`) is a slot function
+/// without parameters for Vue's compiler. The generated slot function declares
+/// its synthetic parameter for it; an empty authored pattern would leave the
+/// parameter without a name (`_slot_text_7(: __VizeSlotPayload<…>)`), a syntax
+/// error that aborts Corsa's semantic pass for every file in the project.
+#[test]
+fn empty_v_slot_expression_keeps_the_slot_function_parseable() {
+    for template in [
+        r#"<el-badge><template #content="">{{ label }}</template></el-badge>"#,
+        r#"<el-badge><template #content=" ">{{ label }}</template></el-badge>"#,
+    ] {
+        let code = generate(template);
+        let allocator = oxc_allocator::Allocator::default();
+        let parsed = oxc_parser::Parser::new(&allocator, &code, oxc_span::SourceType::ts()).parse();
+        assert!(
+            parsed.diagnostics.is_empty(),
+            "the generated module must parse: {:?}\n{code}",
+            parsed.diagnostics
+        );
+        assert!(
+            !code.contains("(: __VizeSlotPayload"),
+            "an empty slot-props expression must not become the parameter:\n{code}"
+        );
+        assert!(
+            code.contains("_slot_content_")
+                && code.contains("(__vize_slot_props_")
+                && code.contains("void __vize_slot_props_"),
+            "the slot function must declare its synthetic parameter:\n{code}"
+        );
+    }
+}
