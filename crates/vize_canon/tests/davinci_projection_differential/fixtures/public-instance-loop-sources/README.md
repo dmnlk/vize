@@ -1,0 +1,36 @@
+# Additive loop-source projection witnesses
+
+The binding-check differential originally counted 64 template diagnostics, plus
+the separately authenticated 7 registered carriers and 2 SVG carriers. #10933
+adds unresolved reads for same-element `v-for` collection expressions. Two
+existing fixture inputs now contribute comparisons that were previously absent:
+
+| Source below `tests/_fixtures` | SFC span | Template span | Read |
+| --- | --- | --- | --- |
+| `_projects/ecosystem-products/src/NaiveUiOptionsApi.vue` | `2474:2486` | `347:359` | `visibleTasks` |
+| `vue-language-tools/upstream/test-workspace/tsc/#3121/main.vue` | `53:64` | `43:54` | `slotFilters` |
+
+`slotFilters` is unbound in the upstream fixture's empty script setup. In the
+Naive UI fixture, `visibleTasks` is an Options API computed property. This test
+intentionally calls `type_check_sfc` with the existing default binding-check
+options, without enabling Options API resolution; the original census already
+contains the same fixture's other data/computed/method reads. This addition
+extends that unchanged low-level projection contract to its collection read.
+It does not claim that an Options API consumer should reject this component.
+
+`additions.json` retains each complete authored source, byte length and SHA-256,
+the complete diagnostic, template base and exact authored span/text. Admission
+requires the complete observation to match. Other diagnostics in these same
+files remain original comparisons. Missing, duplicate, changed-body, changed-span
+and substituted-path observations fail closed.
+
+`comparisons.json` retains all 66 observations before admission from
+[run 40492880810, job 122151205163](https://github.com/ubugeeei-prod/vize/actions/runs/40492880810/job/122151205163),
+at merge source `8b700d458ecf5ab9f61d84f61948b73d23029213`; its metadata also
+records the PR head and raw job-log SHA-256. `original-comparisons.json` retains
+the 64 exact path/diagnostic/span/text identities after separating these two
+audited reads. The test requires this exact original list as well as its
+unchanged count, and a same-count mutation control guards the list comparison.
+
+The existing 64, registered 7 and SVG 2 counters remain independent. The two
+loop-source additions have a separate exact counter and cannot replace them.
