@@ -14,7 +14,9 @@
 //!   `UndefinedRefs` half covers every checked expression);
 //! - a corpus shard: `VIZE_DAVINCI_FACT_CORPUS=<dir>[,<dir>…]` sweeps every
 //!   `.vue` file below (the per-PR gate is
-//!   `tests/tooling/davinci-fact-spec-corpus.test.ts`).
+//!   `tests/tooling/davinci-fact-spec-corpus.test.ts`). An optional
+//!   `VIZE_DAVINCI_FACT_CORPUS_WITNESS` adds pinned real-project roots with
+//!   positive unused rows; original and witness scopes are printed separately.
 //!
 //! The `UndefinedRefs` trace is recorded in debug builds only; a release
 //! run reports that half as not compared instead of passing it.
@@ -222,11 +224,80 @@ fn the_lattice_join_matches_the_spec() {
 }
 
 #[test]
+fn v_for_collection_reads_do_not_supply_unused_fact_witnesses() {
+    // Reduced from ant-design-vue's dropdown/demo/arrow.vue: the collection
+    // is used even when its only template occurrence is a v-for source.
+    let mut planes = Planes::default();
+    run_source(
+        "v-for-collection.vue",
+        "<script setup>const placements = ['top', 'bottom'];</script>\
+         <template><div v-for=\"placement in placements\">{{ placement }}</div></template>",
+        &mut planes,
+    );
+    assert_eq!(
+        planes.unused.divergences,
+        Vec::<vize_carton::CompactString>::new()
+    );
+    assert_eq!(
+        (
+            planes.unused.artifacts,
+            planes.unused.compared,
+            planes.unused.facts
+        ),
+        if cfg!(debug_assertions) {
+            (1, 1, 0)
+        } else {
+            (1, 0, 0)
+        }
+    );
+}
+
+#[test]
 fn the_corpus_shard_agrees_with_the_specs() {
     let Some(roots) = std::env::var_os("VIZE_DAVINCI_FACT_CORPUS") else {
         eprintln!("VIZE_DAVINCI_FACT_CORPUS unset: committed planes only");
         return;
     };
+    let mut shard = corpus_roots(&roots);
+    eprintln!("{}", shard.scope_lines("corpus originals"));
+    if let Some(roots) = std::env::var_os("VIZE_DAVINCI_FACT_CORPUS_WITNESS") {
+        let witness = corpus_roots(&roots);
+        eprintln!("{}", witness.scope_lines("corpus witnesses"));
+        if cfg!(debug_assertions) {
+            witness
+                .unused
+                .verdict("unused-bindings", "corpus witnesses")
+                .unwrap();
+        }
+        shard.absorb(witness);
+    }
+    eprintln!("{}", shard.scope_lines("corpus shard"));
+    shard.assert_verdicts("corpus shard");
+    if cfg!(debug_assertions) {
+        shard
+            .unused
+            .verdict("unused-bindings", "corpus shard")
+            .unwrap();
+    }
+    shard
+        .reactivity
+        .verdict("reactivity", "corpus shard")
+        .unwrap_or_else(|message| panic!("{message}"));
+    assert!(
+        shard.provide.divergences.is_empty(),
+        "provide-inject corpus diverged: {:?}",
+        shard.provide.divergences
+    );
+    // The original shard's direct `provide()` / `inject()` calls sit outside
+    // the tracker's top-level script-setup shape, so that half compares no
+    // rows. `the_provide_inject_spec_agrees_on_a_drawn_sfc` is the comparison.
+    shard
+        .race
+        .verdict("race-conditions", "corpus shard")
+        .unwrap_or_else(|message| panic!("{message}"));
+}
+
+fn corpus_roots(roots: &std::ffi::OsStr) -> Planes {
     let mut files = Vec::new();
     for root in roots.to_string_lossy().split(',') {
         let root = PathBuf::from(root);
@@ -263,30 +334,7 @@ fn the_corpus_shard_agrees_with_the_specs() {
             &mut shard,
         );
     }
-    eprintln!("{}", shard.scope_lines("corpus shard"));
-    shard.assert_verdicts("corpus shard");
-    if cfg!(debug_assertions) {
-        shard
-            .unused
-            .verdict("unused-bindings", "corpus shard")
-            .unwrap();
-    }
     shard
-        .reactivity
-        .verdict("reactivity", "corpus shard")
-        .unwrap_or_else(|message| panic!("{message}"));
-    assert!(
-        shard.provide.divergences.is_empty(),
-        "provide-inject corpus diverged: {:?}",
-        shard.provide.divergences
-    );
-    // The committed shard's direct `provide()` / `inject()` calls sit outside
-    // the tracker's top-level script-setup shape, so that half compares no
-    // rows. `the_provide_inject_spec_agrees_on_a_drawn_sfc` is the comparison.
-    shard
-        .race
-        .verdict("race-conditions", "corpus shard")
-        .unwrap_or_else(|message| panic!("{message}"));
 }
 
 #[test]
