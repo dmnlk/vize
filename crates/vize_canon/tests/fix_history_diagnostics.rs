@@ -1109,6 +1109,42 @@ fn undefined_context_keeps_complete_authored_diagnostics() {
 }
 
 #[test]
+fn options_api_reserved_props_resolve_dynamic_component_references() {
+    if native_fixture_runtime_disabled() {
+        return;
+    }
+    check_pack(
+        "options-api-reserved-component-reference",
+        "options_api_reserved_props_resolve_dynamic_component_references",
+        "482dd05d23ac9d1bec4065608dd8fe562a11b3b0",
+        None,
+        &[
+            "reserved-prop-dynamic-component",
+            "reserved-prop-dynamic-component-wrong-member",
+            "reserved-prop-authored-local-collision",
+        ],
+    );
+}
+
+#[test]
+fn empty_v_slot_expressions_keep_slot_scopes_checked() {
+    if native_fixture_runtime_disabled() {
+        return;
+    }
+    check_pack(
+        "empty-v-slot-expression",
+        "empty_v_slot_expressions_keep_slot_scopes_checked",
+        "482dd05d23ac9d1bec4065608dd8fe562a11b3b0",
+        None,
+        &[
+            "empty-expression",
+            "blank-expression",
+            "empty-expression-unknown-slot",
+        ],
+    );
+}
+
+#[test]
 fn custom_properties_resolve_on_the_template_instance() {
     if native_fixture_runtime_disabled() {
         return;

@@ -58,6 +58,7 @@ export const TYPECHECKER_TESTS = {
     "editor_alias_import_extension_styles_keep_native_diagnostics",
   "empty-generic-public-contract-10540":
     "empty_generic_markers_preserve_functional_public_contracts",
+  "empty-v-slot-expression": "empty_v_slot_expressions_keep_slot_scopes_checked",
   "escaped-import-literals-10763": "escaped_module_paths_preserve_complete_authored_diagnostics",
   "event-handler-narrowing": "inline_event_assignments_preserve_exact_diagnostics",
   "experimental-router-import-10520":
@@ -85,6 +86,8 @@ export const TYPECHECKER_TESTS = {
   "optional-fallthrough-spread-10170":
     "optional_fallthrough_spread_preserves_valid_values_and_rejects_invalid_values",
   "options-api-any-instance": "options_api_any_instance_preserves_complete_original_diagnostics",
+  "options-api-reserved-component-reference":
+    "options_api_reserved_props_resolve_dynamic_component_references",
   "package-target-deletion-refresh": "missing_exported_package_target_preserves_ts2307",
   "planned-generic-syntax-route-10598":
     "planned_generic_syntax_keeps_independent_body_errors_through_repairs",
@@ -157,6 +160,7 @@ export const sourceRevisions = {
   "dynamic-directive-expression-mapping-10182": "f305bcc8c81b8f6009dabb5a3a61bb838c755701",
   "editor-alias-import-extension-10753": "377e5df97c4effa786a6426a62f61296ce16c750",
   "empty-generic-public-contract-10540": "4fdc457df6498c4636efb35dd76af61394ad7006",
+  "empty-v-slot-expression": "482dd05d23ac9d1bec4065608dd8fe562a11b3b0",
   "escaped-import-literals-10763": "62652a4d4029fa11016dfa1ac8c24669b42c8d7a",
   "event-handler-narrowing": originalFixtureRevision,
   "experimental-router-import-10520": "a29d9c0b1961ada51037db402c3b74436a56d623",
@@ -181,6 +185,7 @@ export const sourceRevisions = {
   "nuxt-unknown-template-options-10013": "fb700551a3a3a69f8976efa6fe31bca43ebc19b4",
   "optional-fallthrough-spread-10170": "8300867552287abb14f4fbb7471c705aea72bbdf",
   "options-api-any-instance": "35bdad84760e6251edd52bb2e3e52701974a9d63",
+  "options-api-reserved-component-reference": "482dd05d23ac9d1bec4065608dd8fe562a11b3b0",
   "package-target-deletion-refresh": "13fa41356d075047a229f580014b637d3bbeb57f",
   "planned-generic-syntax-route-10598": "957827706dd439d9810a24f65b4a16c45f266b5e",
   "portable-pug-10434": "c2132e45d47aad595aac7e07f5e71a78b8ffd1c8",

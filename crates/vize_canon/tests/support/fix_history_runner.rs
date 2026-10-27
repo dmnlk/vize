@@ -118,7 +118,9 @@ pub(crate) fn check_pack(
             | "global-scope-build-info-10819"
             | "reopen-repaired-diagnostics-10730"
             | "editor-alias-import-extension-10753"
-            | "setup-custom-properties" => regression,
+            | "options-api-reserved-component-reference"
+            | "setup-custom-properties"
+            | "empty-v-slot-expression" => regression,
             "valueless-directive-import-3140" => {
                 "88e8500c1e5f1b29d80f42c8ca065cc9cbd56899"
             }
@@ -143,11 +145,16 @@ pub(crate) fn check_pack(
             .map(|options| options.options_api),
         matches!(
             name,
-            "options-api-any-instance" | "setup-custom-properties" | "jsx-prop-token-ranges-10494"
+            "options-api-any-instance"
+                | "options-api-reserved-component-reference"
+                | "setup-custom-properties"
+                | "jsx-prop-token-ranges-10494"
         )
         .then_some(matches!(
             name,
-            "options-api-any-instance" | "setup-custom-properties"
+            "options-api-any-instance"
+                | "options-api-reserved-component-reference"
+                | "setup-custom-properties"
         )),
         "the original explicit checker options must be retained"
     );
@@ -157,7 +164,10 @@ pub(crate) fn check_pack(
             .map(|options| options.jsx_typecheck),
         matches!(
             name,
-            "options-api-any-instance" | "setup-custom-properties" | "jsx-prop-token-ranges-10494"
+            "options-api-any-instance"
+                | "options-api-reserved-component-reference"
+                | "setup-custom-properties"
+                | "jsx-prop-token-ranges-10494"
         )
         .then_some(name == "jsx-prop-token-ranges-10494"),
         "the authored JSX lowering option must be retained"
