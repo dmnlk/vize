@@ -13,7 +13,15 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 // job already hydrates for the CLI diagnostic fixture (the P2-15 shard), so
 // it costs no extra checkout. Every Croquis fact group migrated by a P4-3
 // wave is compared with its declarative spec's naive evaluator here.
-const shard = ["tests/_fixtures/_git/ant-design-vue", "tests/_fixtures/_git/create-vue"];
+//
+// The real-project submodules carry no genuinely unused `<script setup>`
+// binding (their former `unused-bindings` facts were loop sources, which are
+// reads), so the committed fixture keeps that group non-degenerate.
+const shard = [
+  "tests/_fixtures/_git/ant-design-vue",
+  "tests/_fixtures/_git/create-vue",
+  "tests/_fixtures/davinci-fact-spec/unused-setup-bindings",
+];
 
 function hydrated(relative: string): boolean {
   const dir = path.join(repoRoot, relative);
