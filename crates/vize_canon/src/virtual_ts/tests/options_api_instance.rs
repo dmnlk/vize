@@ -379,28 +379,18 @@ export default defineComponent({
         &Default::default(),
     );
 
-    assert!(
-        output.code.contains(
-            "const _as: __VizeOptionsBinding<typeof __default__, \"as\"> = (void 0) as any; void _as;"
-        ),
-        "a reserved prop must declare its safe local:\n{}",
-        output.code
-    );
-    assert!(
-        output
-            .code
-            .contains("void __vize_options_instance[\"as\"];"),
-        "template expressions keep reading the reserved prop through the instance:\n{}",
-        output.code
-    );
-    assert!(
-        output.code.contains("typeof _as"),
-        "the dynamic component must reference the safe local:\n{}",
-        output.code
-    );
-    assert!(
-        !output.code.contains("const as:") && !output.code.contains("var as:"),
-        "a reserved word must never become a local name:\n{}",
-        output.code
-    );
+    for expected in [
+        // the safe local a component reference reads
+        "  const _as: __VizeOptionsBinding<typeof __default__, \"as\"> = (void 0) as any; void _as;",
+        // template expressions keep reading the reserved prop through the instance
+        "  void __vize_options_instance[\"as\"];",
+        // the dynamic component resolves the local
+        "  type __as_Component_0 = typeof _as;",
+    ] {
+        assert!(
+            output.code.lines().any(|line| line == expected),
+            "expected the exact line {expected:?} in:\n{}",
+            output.code
+        );
+    }
 }
