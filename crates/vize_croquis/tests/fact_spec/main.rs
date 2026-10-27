@@ -286,10 +286,10 @@ fn the_corpus_shard_agrees_with_the_specs() {
         eprintln!("VIZE_DAVINCI_FACT_CORPUS unset: committed planes only");
         return;
     };
-    let mut shard = corpus_roots(&roots);
+    let mut shard = corpus_roots(&roots).expect("original corpus roots must be readable");
     eprintln!("{}", shard.scope_lines("corpus originals"));
     if let Some(roots) = std::env::var_os("VIZE_DAVINCI_FACT_CORPUS_WITNESS") {
-        let witness = corpus_roots(&roots);
+        let witness = corpus_roots(&roots).expect("witness corpus roots must be readable");
         eprintln!("{}", witness.scope_lines("corpus witnesses"));
         if cfg!(debug_assertions) {
             witness
@@ -325,7 +325,7 @@ fn the_corpus_shard_agrees_with_the_specs() {
         .unwrap_or_else(|message| panic!("{message}"));
 }
 
-fn corpus_roots(roots: &std::ffi::OsStr) -> Planes {
+fn corpus_roots(roots: &std::ffi::OsStr) -> std::io::Result<Planes> {
     let mut files = Vec::new();
     for root in roots.to_string_lossy().split(',') {
         let root = PathBuf::from(root);
@@ -341,7 +341,7 @@ fn corpus_roots(roots: &std::ffi::OsStr) -> Planes {
             "VIZE_DAVINCI_FACT_CORPUS must name directories: {}",
             root.display()
         );
-        collect_vue_files(&root, &mut files).expect("corpus roots must be readable");
+        collect_vue_files(&root, &mut files)?;
     }
     assert!(!files.is_empty(), "corpus shard found no .vue files");
     let mut shard = Planes::default();
@@ -361,7 +361,7 @@ fn corpus_roots(roots: &std::ffi::OsStr) -> Planes {
             &mut shard,
         );
     }
-    shard
+    Ok(shard)
 }
 
 #[test]

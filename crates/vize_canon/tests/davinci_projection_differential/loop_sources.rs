@@ -190,8 +190,15 @@ mod controls {
         assert_eq!(sha256(stdout), receipt["beforeStdoutSha256"]);
         assert_eq!(sha256(stderr), receipt["beforeStderrSha256"]);
         assert_eq!(sha256(patch), receipt["observerPatchSha256"]);
-        assert!(stdout.contains("test check_diagnostics_land_inside_the_projection ... ok"));
-        assert!(stdout.contains("test result: ok. 1 passed; 0 failed; 0 ignored;"));
+        assert_eq!(
+            stdout,
+            concat!(
+                "\nrunning 1 test\n",
+                "test check_diagnostics_land_inside_the_projection ... ok\n\n",
+                "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; ",
+                "5 filtered out; finished in 0.41s\n\n"
+            )
+        );
         let observations = stderr
             .lines()
             .filter_map(|line| {
