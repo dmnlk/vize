@@ -56,6 +56,60 @@ runs:
       env:
         VIZE_DAVINCI_DIFFERENTIAL_CORPUS: ${{ github.workspace }}
       run: cargo test --locked --profile ci -p vize_canon --features legacy-differential --test davinci_projection_differential -- --nocapture
+    - name: Authenticate the original public-instance projection reference
+      if: ${{ github.event.pull_request.number == 10933 }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        source_root="$PWD"
+        before_sha=481c94bd55a7276339adc277edd93e30313f6ea9
+        baseline="$RUNNER_TEMP/public-instance-before"
+        capture="$RUNNER_TEMP/native-snapshot-source/public-instance-projection"
+        mkdir -p "$capture"
+        git fetch --no-tags origin "$before_sha"
+        git worktree add --detach "$baseline" "$before_sha"
+        reference="$source_root/crates/vize_canon/tests/davinci_projection_differential/fixtures/public-instance-loop-sources"
+        test "$(sha256sum "$reference/baseline-observer.rs.txt" | cut -d' ' -f1)" = a973e915ed4a453491ca0ce4c3d1bcacbef0e45f3a728854f773abaec300788b
+        cp "$reference/baseline-observer.rs.txt" "$baseline/crates/vize_canon/tests/davinci_projection_differential/main.rs"
+        git -C "$baseline" diff --exit-code -- . ':(exclude)crates/vize_canon/tests/davinci_projection_differential/main.rs'
+        git -C "$baseline" diff > "$capture/observer-only.patch"
+        git -C "$baseline" ls-files -s > "$capture/before-source-index.txt"
+        printf '%s\n' "$before_sha" > "$capture/before.sha"
+        git rev-parse HEAD > "$capture/driver.sha"
+        set +e
+        (cd "$baseline" && CARGO_TARGET_DIR="$source_root/target" cargo test --locked --profile ci -p vize_canon --features legacy-differential --test davinci_projection_differential check_diagnostics_land_inside_the_projection -- --exact --nocapture) > "$capture/before.stdout" 2> "$capture/before.stderr"
+        status=$?
+        set -e
+        printf '%s\n' "$status" > "$capture/before.status"
+        cat "$capture/before.stdout"
+        cat "$capture/before.stderr" >&2
+        test "$status" -eq 0
+        node --input-type=module - "$capture" "$reference" <<'NODE'
+        import assert from 'node:assert/strict';
+        import { readFileSync, writeFileSync } from 'node:fs';
+        import { join } from 'node:path';
+        import { createHash } from 'node:crypto';
+        const [capture, reference] = process.argv.slice(2);
+        const stdout = readFileSync(join(capture, 'before.stdout'), 'utf8');
+        const stderr = readFileSync(join(capture, 'before.stderr'), 'utf8');
+        assert.match(stdout, /test check_diagnostics_land_inside_the_projection \.\.\. ok/);
+        assert.match(stdout, /test result: ok\. 1 passed; 0 failed; 0 ignored;/);
+        const prefix = 'projection baseline comparison=';
+        const actual = stderr.split('\n').filter(line => line.startsWith(prefix)).map(line => JSON.parse(line.slice(prefix.length)));
+        const expected = JSON.parse(readFileSync(join(reference, 'original-comparisons.json'), 'utf8'));
+        const ordered = rows => rows.map(row => JSON.stringify(row)).sort();
+        assert.equal(actual.length, 64);
+        assert.deepEqual(ordered(actual), ordered(expected));
+        writeFileSync(join(capture, 'before-comparisons.json'), JSON.stringify(actual, null, 2) + '\n');
+        const digest = name => createHash('sha256').update(readFileSync(join(capture, name))).digest('hex');
+        writeFileSync(join(capture, 'receipt.json'), JSON.stringify({
+          before: readFileSync(join(capture, 'before.sha'), 'utf8').trim(),
+          driver: readFileSync(join(capture, 'driver.sha'), 'utf8').trim(),
+          run: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT,
+          comparisons: actual.length, beforeStdoutSha256: digest('before.stdout'),
+          beforeStderrSha256: digest('before.stderr'), comparisonSha256: digest('before-comparisons.json'),
+        }, null, 2) + '\n');
+        NODE
     - name: Install locked Vue dependency and pinned syntax corpus
       shell: bash
       run: |

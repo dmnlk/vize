@@ -88,10 +88,9 @@ fn compare_template(id: &str, template: &str) -> usize {
 }
 
 /// Measured check diagnostics on `tests/_fixtures` that both mappings cover.
-// 64 originally; a same-element `v-for` source is an unresolved template read
-// since the public-instance form, so two loop sources now land as
-// `undefined-binding` comparisons too.
-const CHECK_DIAGNOSTIC_COMPARISONS: usize = 66;
+// Preserve all original comparisons. The two audited same-element v-for
+// collection reads have a separate exact registry and counter below.
+const CHECK_DIAGNOSTIC_COMPARISONS: usize = 64;
 
 #[test]
 fn check_diagnostics_land_inside_the_projection() {

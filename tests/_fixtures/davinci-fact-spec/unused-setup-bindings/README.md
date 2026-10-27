@@ -1,12 +1,11 @@
-# Unused setup bindings for the fact-spec corpus shard
+# Unused setup binding regression
 
-The corpus shard of `tests/tooling/davinci-fact-spec-corpus.test.ts` compares
-every Croquis fact group with its declarative spec's naive evaluator and fails
-a group that compares zero facts. The hydrated real-project submodules carry no
-genuinely unused `<script setup>` binding: the fourteen `UnusedBindings` facts
-they used to contribute were bindings read only by a same-element `v-for`
-source, which the drawer and the evaluator now both count as reads.
+`LoopSource.vue` distinguishes a collection read by a same-element `v-for`
+from bindings nothing reads: `colors` is used, while `unusedLabel` and
+`unusedCount` remain unused.
 
-`LoopSource.vue` keeps the `unused-bindings` group non-degenerate with two
-bindings nothing reads, and pins the loop-source case: `colors` is read by
-`v-for="color in colors"` and must not be reported.
+This committed fixture supplements the reduced collection-read test in
+`crates/vize_croquis/tests/fact_spec/main.rs`. It does not replace the fact-spec
+corpus shard. That gate retains all 773 ant-design-vue/create-vue inputs and
+uses the independently pinned layoutit-grid corpus as its positive unused
+witness; the original and witness scopes are reported separately.
