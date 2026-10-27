@@ -85,6 +85,8 @@ export const TYPECHECKER_TESTS = {
   "optional-fallthrough-spread-10170":
     "optional_fallthrough_spread_preserves_valid_values_and_rejects_invalid_values",
   "options-api-any-instance": "options_api_any_instance_preserves_complete_original_diagnostics",
+  "options-api-reserved-component-reference":
+    "options_api_reserved_props_resolve_dynamic_component_references",
   "package-target-deletion-refresh": "missing_exported_package_target_preserves_ts2307",
   "planned-generic-syntax-route-10598":
     "planned_generic_syntax_keeps_independent_body_errors_through_repairs",
@@ -180,6 +182,7 @@ export const sourceRevisions = {
   "nuxt-unknown-template-options-10013": "fb700551a3a3a69f8976efa6fe31bca43ebc19b4",
   "optional-fallthrough-spread-10170": "8300867552287abb14f4fbb7471c705aea72bbdf",
   "options-api-any-instance": "35bdad84760e6251edd52bb2e3e52701974a9d63",
+  "options-api-reserved-component-reference": "482dd05d23ac9d1bec4065608dd8fe562a11b3b0",
   "package-target-deletion-refresh": "13fa41356d075047a229f580014b637d3bbeb57f",
   "planned-generic-syntax-route-10598": "957827706dd439d9810a24f65b4a16c45f266b5e",
   "portable-pug-10434": "c2132e45d47aad595aac7e07f5e71a78b8ffd1c8",

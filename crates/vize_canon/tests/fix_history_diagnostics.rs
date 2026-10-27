@@ -1107,3 +1107,20 @@ fn undefined_context_keeps_complete_authored_diagnostics() {
         &["prop-used"],
     );
 }
+
+#[test]
+fn options_api_reserved_props_resolve_dynamic_component_references() {
+    if native_fixture_runtime_disabled() {
+        return;
+    }
+    check_pack(
+        "options-api-reserved-component-reference",
+        "options_api_reserved_props_resolve_dynamic_component_references",
+        "482dd05d23ac9d1bec4065608dd8fe562a11b3b0",
+        None,
+        &[
+            "reserved-prop-dynamic-component",
+            "reserved-prop-dynamic-component-wrong-member",
+        ],
+    );
+}
