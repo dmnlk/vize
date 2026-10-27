@@ -9,6 +9,10 @@ use super::super::{
     BatchTypeChecker, create_project_case, relative_path, resolve_test_tsgo_binary,
 };
 use crate::batch::{BatchTypeCheckerOptions, TypeChecker};
+use corsa::{
+    api::{ApiMode, ApiSpawnConfig, ProjectSession},
+    runtime::block_on,
+};
 use vize_l0::{String, cstr};
 
 /// A global mixin's members, declared the way a plugin declares them.
@@ -58,6 +62,209 @@ import Box from './Box.vue'
 export default defineComponent({ components: { Box } })
 </script>
 "#;
+
+// Separate inputs preserve the original three-diagnostic regression above.
+const MEMBER_AUGMENTATION: &str = r#"import 'vue';
+declare module 'vue' {
+  interface ComponentCustomProperties {
+    isSP: boolean;
+    appName: string;
+    opaque: unknown;
+    dynamic: any;
+    $service: { ping(value: string): number };
+  }
+}
+"#;
+
+const MEMBER_SETUP: &str = r#"<script setup lang="ts">
+const label = 'x'
+</script>
+
+<template>
+  <span :title="isSP ? 'a' : 'b'">{{ appName.toUpperCase() }} {{ label }}</span>
+  <b>{{ isSP.toFixed() }}</b>
+  <b>{{ appName.toFixed() }}</b>
+  <i>{{ opaque.member }}</i>
+  <u>{{ dynamic.deep.call() }}</u>
+  <p>{{ $service.ping(123) }}</p>
+  <u>{{ missing }} {{ missing }}</u>
+</template>
+"#;
+
+#[test]
+fn custom_property_member_types_and_native_type_queries_remain_exact() {
+    let Some(native) = resolve_test_tsgo_binary() else {
+        assert!(
+            std::env::var_os("VIZE_TEST_REQUIRE_TSGO").is_none(),
+            "required public-instance type queries cannot skip the native runtime"
+        );
+        return;
+    };
+    let project_root = create_project_case(
+        "setup-custom-property-member-types",
+        &[
+            ("src/mixin.d.ts", MEMBER_AUGMENTATION),
+            ("src/Members.vue", MEMBER_SETUP),
+        ],
+    );
+    let mut checker = BatchTypeChecker::with_options_and_corsa_path(
+        &project_root,
+        BatchTypeCheckerOptions::default(),
+        Some(&native),
+    )
+    .expect("member checker should initialize");
+    checker.scan_project().expect("member project should scan");
+    let checked = checker
+        .check_project()
+        .expect("member project should check");
+    let mut diagnostics: Vec<_> = checked
+        .diagnostics
+        .iter()
+        .map(|diagnostic| {
+            (
+                relative_path(&project_root, &diagnostic.file),
+                diagnostic.code,
+                cstr!(
+                    "{}:{}: {}",
+                    diagnostic.line + 1,
+                    diagnostic.column + 1,
+                    diagnostic.message
+                ),
+            )
+        })
+        .collect();
+    diagnostics.sort();
+    let projected = checker.virtual_files();
+    let projected = projected
+        .iter()
+        .find(|file| file.original_path.ends_with("Members.vue"))
+        .expect("actual Members.vue projection");
+    let generated = std::fs::read_to_string(&projected.virtual_path)
+        .expect("materialized production projection");
+    assert_eq!(generated, projected.content.as_str());
+    let (materialized_root, config) = checker.native_project_paths_for_test();
+    let packet = serde_json::json!({
+        "native": native,
+        "wholeAuthoredSource": MEMBER_SETUP,
+        "wholeAugmentation": MEMBER_AUGMENTATION,
+        "virtualPath": projected.virtual_path,
+        "wholeGeneratedSource": generated,
+        "configPath": config,
+        "wholeConfig": std::fs::read_to_string(&config).expect("materialized config"),
+        "wholeDiagnostics": checked.diagnostics,
+    });
+    retain_member_packet("before-type-queries", &packet);
+    let file_wire = projected.virtual_path.display().to_string();
+    let config_wire = config.display().to_string();
+    let types = block_on(async {
+        let session = ProjectSession::spawn(
+            ApiSpawnConfig::new(&native)
+                .with_mode(ApiMode::AsyncJsonRpcStdio)
+                .with_cwd(&materialized_root),
+            &config_wire,
+            None,
+        )
+        .await
+        .expect("actual materialized member project session should initialize");
+        let mut types = Vec::new();
+        for (name, expected) in [
+            ("isSP", "boolean"),
+            ("appName", "string"),
+            ("opaque", "unknown"),
+            ("dynamic", "any"),
+        ] {
+            let declaration_marker = cstr!("var {name}!:");
+            let instance_marker = cstr!("__vize_public_instance.{name}");
+            let declaration = generated
+                .find(declaration_marker.as_str())
+                .map(|start| start + "var ".len())
+                .expect("actual typed lexical declaration");
+            let instance_read = generated
+                .find(instance_marker.as_str())
+                .map(|start| start + "__vize_public_instance.".len())
+                .expect("actual instance member read");
+            for (kind, offset) in [("lexical", declaration), ("instance", instance_read)] {
+                let position = u32::try_from(offset).expect("native query position");
+                let record = session
+                    .get_type_at_position(&file_wire, position)
+                    .await
+                    .expect("native member type query should complete")
+                    .expect("native member type should exist");
+                let rendered = session
+                    .type_to_string(record.id, None, None)
+                    .await
+                    .expect("native member type should render");
+                types.push(serde_json::json!({
+                    "name": name,
+                    "kind": kind,
+                    "position": position,
+                    "wholeRecord": cstr!("{record:#?}"),
+                    "type": rendered,
+                    "expected": expected,
+                }));
+            }
+        }
+        session
+            .close()
+            .await
+            .expect("member type session should close");
+        types
+    });
+    retain_member_packet("type-queries", &serde_json::json!({"queries": types}));
+    for query in &types {
+        assert_eq!(query.get("type"), query.get("expected"), "{query}");
+    }
+    let mut expected: Vec<(String, Option<u32>, String)> = vec![
+        (
+            "src/Members.vue".into(),
+            Some(2339),
+            "7:14: Property 'toFixed' does not exist on type 'boolean'.".into(),
+        ),
+        (
+            "src/Members.vue".into(),
+            Some(2339),
+            "8:17: Property 'toFixed' does not exist on type 'string'.".into(),
+        ),
+        (
+            "src/Members.vue".into(),
+            Some(18046),
+            "9:9: 'opaque' is of type 'unknown'.".into(),
+        ),
+        (
+            "src/Members.vue".into(),
+            Some(2345),
+            "11:23: Argument of type 'number' is not assignable to parameter of type 'string'."
+                .into(),
+        ),
+        (
+            "src/Members.vue".into(),
+            Some(2339),
+            "12:9: Property 'missing' does not exist on the component instance.".into(),
+        ),
+        (
+            "src/Members.vue".into(),
+            Some(2339),
+            "12:23: Property 'missing' does not exist on the component instance.".into(),
+        ),
+    ];
+    expected.sort();
+    assert_eq!(diagnostics, expected);
+    drop(checker);
+    let _ = std::fs::remove_dir_all(&project_root);
+}
+
+fn retain_member_packet(name: &str, packet: &serde_json::Value) {
+    eprintln!("public-instance member packet {name}={packet}");
+    if let Some(directory) = std::env::var_os("VIZE_SNAPSHOT_SOURCE_CAPTURE_DIR") {
+        let directory = std::path::PathBuf::from(directory).join("public-instance-member-types");
+        std::fs::create_dir_all(&directory).expect("member packet directory");
+        std::fs::write(
+            directory.join(cstr!("{name}.json").as_str()),
+            serde_json::to_vec_pretty(packet).expect("complete member packet"),
+        )
+        .expect("retain complete member packet");
+    }
+}
 
 #[test]
 fn custom_properties_resolve_in_script_setup_templates() {
