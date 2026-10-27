@@ -160,7 +160,8 @@ fn check_diagnostics_land_inside_the_projection() {
                     additions.push(diagnostic);
                 } else {
                     let observation = serde_json::json!({
-                        "path": path.strip_prefix(&root).expect("fixture relative path"),
+                        "path": path.strip_prefix(&root).expect("fixture relative path")
+                            .to_string_lossy().replace('\\', "/"),
                         "diagnostic": diagnostic,
                         "templateBase": base,
                         "authoredSpan": [span.start, span.end],

@@ -120,6 +120,16 @@ mod controls {
     use std::panic::{AssertUnwindSafe, catch_unwind};
 
     #[test]
+    fn frozen_baseline_observer_remains_authenticated() {
+        assert_eq!(
+            sha256(include_str!(
+                "fixtures/public-instance-loop-sources/baseline-observer.rs.txt"
+            )),
+            "a973e915ed4a453491ca0ce4c3d1bcacbef0e45f3a728854f773abaec300788b"
+        );
+    }
+
+    #[test]
     fn exact_sources_pass_but_missing_duplicate_changed_body_and_changed_span_refuse() {
         let root = Path::new("private-fixtures");
         let registry: Registry = serde_json::from_str(REGISTRY).expect("fixed registry");

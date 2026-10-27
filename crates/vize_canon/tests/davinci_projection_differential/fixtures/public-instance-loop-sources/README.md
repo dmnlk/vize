@@ -34,3 +34,13 @@ unchanged count, and a same-count mutation control guards the list comparison.
 
 The existing 64, registered 7 and SVG 2 counters remain independent. The two
 loop-source additions have a separate exact counter and cannot replace them.
+
+`baseline-observer.rs.txt` is the complete capture-only test from
+`626b4f2b25437ec9d4b2cff46181586babec0105`, before the additive registration.
+Its immutable bytes, SHA-256 and original baseline source are recorded in
+`baseline-observer.json`. Copying this observer onto
+`481c94bd55a7276339adc277edd93e30313f6ea9` leaves the production source intact
+and permits an Actions job to compare the real before observations against the
+64-entry retained list. This binding-only test needs the committed corpus and
+`--features legacy-differential`; it needs no npm installation, submodule or
+native checker process.
