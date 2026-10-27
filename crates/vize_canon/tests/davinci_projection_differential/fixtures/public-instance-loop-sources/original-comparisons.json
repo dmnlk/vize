@@ -1,9 +1,6 @@
 [
   {
-    "authoredSpan": [
-      81,
-      96
-    ],
+    "authoredSpan": [81, 96],
     "authoredText": "selectedLibrary",
     "diagnostic": {
       "code": "undefined-binding",
@@ -17,10 +14,7 @@
     "templateBase": 2127
   },
   {
-    "authoredSpan": [
-      174,
-      186
-    ],
+    "authoredSpan": [174, 186],
     "authoredText": "markReviewed",
     "diagnostic": {
       "code": "undefined-binding",
@@ -34,10 +28,7 @@
     "templateBase": 2127
   },
   {
-    "authoredSpan": [
-      187,
-      202
-    ],
+    "authoredSpan": [187, 202],
     "authoredText": "selectedLibrary",
     "diagnostic": {
       "code": "undefined-binding",
@@ -51,10 +42,7 @@
     "templateBase": 2127
   },
   {
-    "authoredSpan": [
-      222,
-      235
-    ],
+    "authoredSpan": [222, 235],
     "authoredText": "selectedLabel",
     "diagnostic": {
       "code": "undefined-binding",
@@ -68,10 +56,7 @@
     "templateBase": 2127
   },
   {
-    "authoredSpan": [
-      271,
-      284
-    ],
+    "authoredSpan": [271, 284],
     "authoredText": "statusTagType",
     "diagnostic": {
       "code": "undefined-binding",
@@ -85,10 +70,7 @@
     "templateBase": 2127
   },
   {
-    "authoredSpan": [
-      289,
-      302
-    ],
+    "authoredSpan": [289, 302],
     "authoredText": "statusMessage",
     "diagnostic": {
       "code": "undefined-binding",
@@ -102,10 +84,7 @@
     "templateBase": 2127
   },
   {
-    "authoredSpan": [
-      484,
-      494
-    ],
+    "authoredSpan": [484, 494],
     "authoredText": "toggleTask",
     "diagnostic": {
       "code": "undefined-binding",
@@ -119,10 +98,7 @@
     "templateBase": 2127
   },
   {
-    "authoredSpan": [
-      606,
-      618
-    ],
+    "authoredSpan": [606, 618],
     "authoredText": "lastReviewed",
     "diagnostic": {
       "code": "undefined-binding",
@@ -136,10 +112,7 @@
     "templateBase": 2127
   },
   {
-    "authoredSpan": [
-      638,
-      650
-    ],
+    "authoredSpan": [638, 650],
     "authoredText": "lastReviewed",
     "diagnostic": {
       "code": "undefined-binding",
@@ -153,10 +126,7 @@
     "templateBase": 2127
   },
   {
-    "authoredSpan": [
-      108,
-      113
-    ],
+    "authoredSpan": [108, 113],
     "authoredText": "query",
     "diagnostic": {
       "code": "undefined-binding",
@@ -170,10 +140,7 @@
     "templateBase": 1148
   },
   {
-    "authoredSpan": [
-      131,
-      145
-    ],
+    "authoredSpan": [131, 145],
     "authoredText": "selectedAction",
     "diagnostic": {
       "code": "undefined-binding",
@@ -187,10 +154,7 @@
     "templateBase": 1148
   },
   {
-    "authoredSpan": [
-      190,
-      201
-    ],
+    "authoredSpan": [190, 201],
     "authoredText": "buttonLabel",
     "diagnostic": {
       "code": "undefined-binding",
@@ -204,10 +168,7 @@
     "templateBase": 1148
   },
   {
-    "authoredSpan": [
-      214,
-      228
-    ],
+    "authoredSpan": [214, 228],
     "authoredText": "selectedAction",
     "diagnostic": {
       "code": "undefined-binding",
@@ -221,10 +182,7 @@
     "templateBase": 1148
   },
   {
-    "authoredSpan": [
-      393,
-      405
-    ],
+    "authoredSpan": [393, 405],
     "authoredText": "chooseAction",
     "diagnostic": {
       "code": "undefined-binding",
@@ -238,10 +196,7 @@
     "templateBase": 1148
   },
   {
-    "authoredSpan": [
-      438,
-      453
-    ],
+    "authoredSpan": [438, 453],
     "authoredText": "normalizedQuery",
     "diagnostic": {
       "code": "undefined-binding",
@@ -255,10 +210,7 @@
     "templateBase": 1148
   },
   {
-    "authoredSpan": [
-      62,
-      64
-    ],
+    "authoredSpan": [62, 64],
     "authoredText": "$t",
     "diagnostic": {
       "code": "undefined-binding",
@@ -272,10 +224,7 @@
     "templateBase": 347
   },
   {
-    "authoredSpan": [
-      98,
-      100
-    ],
+    "authoredSpan": [98, 100],
     "authoredText": "$t",
     "diagnostic": {
       "code": "undefined-binding",
@@ -289,10 +238,7 @@
     "templateBase": 347
   },
   {
-    "authoredSpan": [
-      33,
-      35
-    ],
+    "authoredSpan": [33, 35],
     "authoredText": "$t",
     "diagnostic": {
       "code": "undefined-binding",
@@ -306,10 +252,7 @@
     "templateBase": 415
   },
   {
-    "authoredSpan": [
-      63,
-      69
-    ],
+    "authoredSpan": [63, 69],
     "authoredText": "$shout",
     "diagnostic": {
       "code": "undefined-binding",
@@ -323,10 +266,7 @@
     "templateBase": 415
   },
   {
-    "authoredSpan": [
-      9,
-      17
-    ],
+    "authoredSpan": [9, 17],
     "authoredText": "$missing",
     "diagnostic": {
       "code": "undefined-binding",
@@ -340,10 +280,7 @@
     "templateBase": 426
   },
   {
-    "authoredSpan": [
-      38,
-      46
-    ],
+    "authoredSpan": [38, 46],
     "authoredText": "$missing",
     "diagnostic": {
       "code": "undefined-binding",
@@ -357,10 +294,7 @@
     "templateBase": 426
   },
   {
-    "authoredSpan": [
-      72,
-      80
-    ],
+    "authoredSpan": [72, 80],
     "authoredText": "$missing",
     "diagnostic": {
       "code": "undefined-binding",
@@ -374,10 +308,7 @@
     "templateBase": 426
   },
   {
-    "authoredSpan": [
-      26,
-      28
-    ],
+    "authoredSpan": [26, 28],
     "authoredText": "$t",
     "diagnostic": {
       "code": "undefined-binding",
@@ -391,10 +322,7 @@
     "templateBase": 417
   },
   {
-    "authoredSpan": [
-      38,
-      44
-    ],
+    "authoredSpan": [38, 44],
     "authoredText": "$shout",
     "diagnostic": {
       "code": "undefined-binding",
@@ -408,10 +336,7 @@
     "templateBase": 417
   },
   {
-    "authoredSpan": [
-      9,
-      11
-    ],
+    "authoredSpan": [9, 11],
     "authoredText": "$t",
     "diagnostic": {
       "code": "undefined-binding",
@@ -425,10 +350,7 @@
     "templateBase": 361
   },
   {
-    "authoredSpan": [
-      39,
-      45
-    ],
+    "authoredSpan": [39, 45],
     "authoredText": "$shout",
     "diagnostic": {
       "code": "undefined-binding",
@@ -442,10 +364,7 @@
     "templateBase": 361
   },
   {
-    "authoredSpan": [
-      69,
-      75
-    ],
+    "authoredSpan": [69, 75],
     "authoredText": "$local",
     "diagnostic": {
       "code": "undefined-binding",
@@ -459,10 +378,7 @@
     "templateBase": 361
   },
   {
-    "authoredSpan": [
-      21,
-      28
-    ],
+    "authoredSpan": [21, 28],
     "authoredText": "message",
     "diagnostic": {
       "code": "undefined-binding",
@@ -476,10 +392,7 @@
     "templateBase": 786
   },
   {
-    "authoredSpan": [
-      33,
-      42
-    ],
+    "authoredSpan": [33, 42],
     "authoredText": "increment",
     "diagnostic": {
       "code": "undefined-binding",
@@ -493,10 +406,7 @@
     "templateBase": 708
   },
   {
-    "authoredSpan": [
-      52,
-      59
-    ],
+    "authoredSpan": [52, 59],
     "authoredText": "heading",
     "diagnostic": {
       "code": "undefined-binding",
@@ -510,10 +420,7 @@
     "templateBase": 708
   },
   {
-    "authoredSpan": [
-      72,
-      79
-    ],
+    "authoredSpan": [72, 79],
     "authoredText": "doubled",
     "diagnostic": {
       "code": "undefined-binding",
@@ -527,10 +434,7 @@
     "templateBase": 708
   },
   {
-    "authoredSpan": [
-      92,
-      96
-    ],
+    "authoredSpan": [92, 96],
     "authoredText": "step",
     "diagnostic": {
       "code": "undefined-binding",
@@ -544,10 +448,7 @@
     "templateBase": 708
   },
   {
-    "authoredSpan": [
-      12,
-      21
-    ],
+    "authoredSpan": [12, 21],
     "authoredText": "formatted",
     "diagnostic": {
       "code": "undefined-binding",
@@ -561,10 +462,7 @@
     "templateBase": 511
   },
   {
-    "authoredSpan": [
-      16,
-      22
-    ],
+    "authoredSpan": [16, 22],
     "authoredText": "$style",
     "diagnostic": {
       "code": "undefined-binding",
@@ -578,10 +476,7 @@
     "templateBase": 113
   },
   {
-    "authoredSpan": [
-      48,
-      54
-    ],
+    "authoredSpan": [48, 54],
     "authoredText": "$style",
     "diagnostic": {
       "code": "undefined-binding",
@@ -595,10 +490,7 @@
     "templateBase": 113
   },
   {
-    "authoredSpan": [
-      46,
-      51
-    ],
+    "authoredSpan": [46, 51],
     "authoredText": "order",
     "diagnostic": {
       "code": "undefined-binding",
@@ -612,10 +504,7 @@
     "templateBase": 196
   },
   {
-    "authoredSpan": [
-      57,
-      68
-    ],
+    "authoredSpan": [57, 68],
     "authoredText": "normalizeId",
     "diagnostic": {
       "code": "undefined-binding",
@@ -629,10 +518,7 @@
     "templateBase": 196
   },
   {
-    "authoredSpan": [
-      86,
-      92
-    ],
+    "authoredSpan": [86, 92],
     "authoredText": "amount",
     "diagnostic": {
       "code": "undefined-binding",
@@ -646,10 +532,7 @@
     "templateBase": 196
   },
   {
-    "authoredSpan": [
-      95,
-      103
-    ],
+    "authoredSpan": [95, 103],
     "authoredText": "currency",
     "diagnostic": {
       "code": "undefined-binding",
@@ -663,10 +546,7 @@
     "templateBase": 196
   },
   {
-    "authoredSpan": [
-      111,
-      117
-    ],
+    "authoredSpan": [111, 117],
     "authoredText": "suffix",
     "diagnostic": {
       "code": "undefined-binding",
@@ -680,10 +560,7 @@
     "templateBase": 196
   },
   {
-    "authoredSpan": [
-      157,
-      162
-    ],
+    "authoredSpan": [157, 162],
     "authoredText": "order",
     "diagnostic": {
       "code": "undefined-binding",
@@ -697,10 +574,7 @@
     "templateBase": 196
   },
   {
-    "authoredSpan": [
-      172,
-      184
-    ],
+    "authoredSpan": [172, 184],
     "authoredText": "statusFilter",
     "diagnostic": {
       "code": "undefined-binding",
@@ -714,10 +588,7 @@
     "templateBase": 196
   },
   {
-    "authoredSpan": [
-      207,
-      213
-    ],
+    "authoredSpan": [207, 213],
     "authoredText": "amount",
     "diagnostic": {
       "code": "undefined-binding",
@@ -731,10 +602,7 @@
     "templateBase": 196
   },
   {
-    "authoredSpan": [
-      216,
-      224
-    ],
+    "authoredSpan": [216, 224],
     "authoredText": "currency",
     "diagnostic": {
       "code": "undefined-binding",
@@ -748,10 +616,7 @@
     "templateBase": 196
   },
   {
-    "authoredSpan": [
-      264,
-      271
-    ],
+    "authoredSpan": [264, 271],
     "authoredText": "$router",
     "diagnostic": {
       "code": "undefined-binding",
@@ -765,10 +630,7 @@
     "templateBase": 315
   },
   {
-    "authoredSpan": [
-      33,
-      40
-    ],
+    "authoredSpan": [33, 40],
     "authoredText": "message",
     "diagnostic": {
       "code": "undefined-binding",
@@ -782,10 +644,7 @@
     "templateBase": 114
   },
   {
-    "authoredSpan": [
-      53,
-      60
-    ],
+    "authoredSpan": [53, 60],
     "authoredText": "message",
     "diagnostic": {
       "code": "undefined-binding",
@@ -799,10 +658,7 @@
     "templateBase": 114
   },
   {
-    "authoredSpan": [
-      38,
-      45
-    ],
+    "authoredSpan": [38, 45],
     "authoredText": "message",
     "diagnostic": {
       "code": "undefined-binding",
@@ -816,10 +672,7 @@
     "templateBase": 122
   },
   {
-    "authoredSpan": [
-      51,
-      58
-    ],
+    "authoredSpan": [51, 58],
     "authoredText": "message",
     "diagnostic": {
       "code": "undefined-binding",
@@ -833,10 +686,7 @@
     "templateBase": 122
   },
   {
-    "authoredSpan": [
-      161,
-      166
-    ],
+    "authoredSpan": [161, 166],
     "authoredText": "first",
     "diagnostic": {
       "code": "undefined-binding",
@@ -850,10 +700,7 @@
     "templateBase": 89
   },
   {
-    "authoredSpan": [
-      225,
-      232
-    ],
+    "authoredSpan": [225, 232],
     "authoredText": "waiting",
     "diagnostic": {
       "code": "undefined-binding",
@@ -867,10 +714,7 @@
     "templateBase": 89
   },
   {
-    "authoredSpan": [
-      30,
-      31
-    ],
+    "authoredSpan": [30, 31],
     "authoredText": "x",
     "diagnostic": {
       "code": "undefined-binding",
@@ -884,10 +728,7 @@
     "templateBase": 70
   },
   {
-    "authoredSpan": [
-      6,
-      9
-    ],
+    "authoredSpan": [6, 9],
     "authoredText": "foo",
     "diagnostic": {
       "code": "undefined-binding",
@@ -901,10 +742,7 @@
     "templateBase": 46
   },
   {
-    "authoredSpan": [
-      47,
-      55
-    ],
+    "authoredSpan": [47, 55],
     "authoredText": "PropType",
     "diagnostic": {
       "code": "undefined-binding",
@@ -918,10 +756,7 @@
     "templateBase": 102
   },
   {
-    "authoredSpan": [
-      47,
-      55
-    ],
+    "authoredSpan": [47, 55],
     "authoredText": "notExist",
     "diagnostic": {
       "code": "undefined-binding",
@@ -935,10 +770,7 @@
     "templateBase": 87
   },
   {
-    "authoredSpan": [
-      119,
-      127
-    ],
+    "authoredSpan": [119, 127],
     "authoredText": "notExist",
     "diagnostic": {
       "code": "undefined-binding",
@@ -952,10 +784,7 @@
     "templateBase": 87
   },
   {
-    "authoredSpan": [
-      135,
-      143
-    ],
+    "authoredSpan": [135, 143],
     "authoredText": "notExist",
     "diagnostic": {
       "code": "undefined-binding",
@@ -969,10 +798,7 @@
     "templateBase": 87
   },
   {
-    "authoredSpan": [
-      5,
-      8
-    ],
+    "authoredSpan": [5, 8],
     "authoredText": "foo",
     "diagnostic": {
       "code": "undefined-binding",
@@ -986,10 +812,7 @@
     "templateBase": 61
   },
   {
-    "authoredSpan": [
-      44,
-      47
-    ],
+    "authoredSpan": [44, 47],
     "authoredText": "bar",
     "diagnostic": {
       "code": "undefined-binding",
@@ -1003,10 +826,7 @@
     "templateBase": 61
   },
   {
-    "authoredSpan": [
-      5,
-      8
-    ],
+    "authoredSpan": [5, 8],
     "authoredText": "foo",
     "diagnostic": {
       "code": "undefined-binding",
@@ -1020,10 +840,7 @@
     "templateBase": 67
   },
   {
-    "authoredSpan": [
-      5,
-      8
-    ],
+    "authoredSpan": [5, 8],
     "authoredText": "foo",
     "diagnostic": {
       "code": "undefined-binding",
@@ -1037,10 +854,7 @@
     "templateBase": 61
   },
   {
-    "authoredSpan": [
-      44,
-      47
-    ],
+    "authoredSpan": [44, 47],
     "authoredText": "bar",
     "diagnostic": {
       "code": "undefined-binding",
@@ -1054,10 +868,7 @@
     "templateBase": 61
   },
   {
-    "authoredSpan": [
-      5,
-      8
-    ],
+    "authoredSpan": [5, 8],
     "authoredText": "foo",
     "diagnostic": {
       "code": "undefined-binding",
@@ -1071,10 +882,7 @@
     "templateBase": 67
   },
   {
-    "authoredSpan": [
-      44,
-      47
-    ],
+    "authoredSpan": [44, 47],
     "authoredText": "bar",
     "diagnostic": {
       "code": "undefined-binding",

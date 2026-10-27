@@ -253,6 +253,34 @@ fn v_for_collection_reads_do_not_supply_unused_fact_witnesses() {
 }
 
 #[test]
+fn collection_reads_preserve_independent_unused_setup_bindings() {
+    let mut planes = Planes::default();
+    run_source(
+        "LoopSource.vue",
+        include_str!(
+            "../../../../tests/_fixtures/davinci-fact-spec/unused-setup-bindings/LoopSource.vue.txt"
+        ),
+        &mut planes,
+    );
+    assert_eq!(
+        planes.unused.divergences,
+        Vec::<vize_carton::CompactString>::new()
+    );
+    assert_eq!(
+        (
+            planes.unused.artifacts,
+            planes.unused.compared,
+            planes.unused.facts
+        ),
+        if cfg!(debug_assertions) {
+            (1, 1, 2)
+        } else {
+            (1, 0, 0)
+        }
+    );
+}
+
+#[test]
 fn the_corpus_shard_agrees_with_the_specs() {
     let Some(roots) = std::env::var_os("VIZE_DAVINCI_FACT_CORPUS") else {
         eprintln!("VIZE_DAVINCI_FACT_CORPUS unset: committed planes only");
@@ -313,8 +341,7 @@ fn corpus_roots(roots: &std::ffi::OsStr) -> Planes {
             "VIZE_DAVINCI_FACT_CORPUS must name directories: {}",
             root.display()
         );
-        collect_vue_files(&root, &mut files)
-            .unwrap_or_else(|error| panic!("corpus walk {}: {error}", root.display()));
+        collect_vue_files(&root, &mut files).expect("corpus roots must be readable");
     }
     assert!(!files.is_empty(), "corpus shard found no .vue files");
     let mut shard = Planes::default();

@@ -168,6 +168,43 @@ mod controls {
     }
 
     #[test]
+    fn retained_before_native_run_matches_every_original_comparison() {
+        let receipt: Value = serde_json::from_str(include_str!(
+            "fixtures/public-instance-loop-sources/baseline-proof/receipt.json"
+        ))
+        .expect("before producer receipt");
+        assert_eq!(
+            receipt["before"],
+            "481c94bd55a7276339adc277edd93e30313f6ea9"
+        );
+        assert_eq!(receipt["run"], "40494413713");
+        assert_eq!(receipt["artifact"], 12730062824_u64);
+        assert_eq!(receipt["comparisons"], 64);
+        let stdout =
+            include_str!("fixtures/public-instance-loop-sources/baseline-proof/stdout.txt");
+        let stderr =
+            include_str!("fixtures/public-instance-loop-sources/baseline-proof/stderr.txt");
+        let patch = include_str!(
+            "fixtures/public-instance-loop-sources/baseline-proof/observer-only.patch.txt"
+        );
+        assert_eq!(sha256(stdout), receipt["beforeStdoutSha256"]);
+        assert_eq!(sha256(stderr), receipt["beforeStderrSha256"]);
+        assert_eq!(sha256(patch), receipt["observerPatchSha256"]);
+        assert!(stdout.contains("test check_diagnostics_land_inside_the_projection ... ok"));
+        assert!(stdout.contains("test result: ok. 1 passed; 0 failed; 0 ignored;"));
+        let observations = stderr
+            .lines()
+            .filter_map(|line| {
+                line.strip_prefix("projection baseline comparison=")
+                    .map(|json| {
+                        serde_json::from_str(json).expect("complete captured before observation")
+                    })
+            })
+            .collect();
+        assert_original_comparisons(observations);
+    }
+
+    #[test]
     fn original_same_count_diagnostic_mutation_refuses() {
         let original: Vec<Value> = serde_json::from_str(ORIGINAL).expect("original comparisons");
         assert_original_comparisons(original.clone());

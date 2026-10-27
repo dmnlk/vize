@@ -83,7 +83,7 @@ const label = 'x'
 <template>
   <span :title="isSP ? 'a' : 'b'">{{ appName.toUpperCase() }} {{ label }}</span>
   <b>{{ isSP.toFixed() }}</b>
-  <b>{{ appName.toFixed() }}</b>
+  <b>{{ appName.missingStringMember() }}</b>
   <i>{{ opaque.member }}</i>
   <u>{{ dynamic.deep.call() }}</u>
   <p>{{ $service.ping(123) }}</p>
@@ -223,7 +223,7 @@ fn custom_property_member_types_and_native_type_queries_remain_exact() {
         (
             "src/Members.vue".into(),
             Some(2339),
-            "8:17: Property 'toFixed' does not exist on type 'string'.".into(),
+            "8:17: Property 'missingStringMember' does not exist on type 'string'.".into(),
         ),
         (
             "src/Members.vue".into(),

@@ -2,10 +2,7 @@
   "version": 1,
   "entries": [
     {
-      "authoredSpan": [
-        347,
-        359
-      ],
+      "authoredSpan": [347, 359],
       "authoredText": "visibleTasks",
       "diagnostic": {
         "code": "undefined-binding",
@@ -22,10 +19,7 @@
       "sourceSha256": "c7965480f191466ff7378c7fd3c68a65f89a2d3cb0a833ef089532649479253c"
     },
     {
-      "authoredSpan": [
-        43,
-        54
-      ],
+      "authoredSpan": [43, 54],
       "authoredText": "slotFilters",
       "diagnostic": {
         "code": "undefined-binding",

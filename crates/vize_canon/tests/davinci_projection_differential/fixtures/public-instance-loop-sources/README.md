@@ -5,10 +5,10 @@ the separately authenticated 7 registered carriers and 2 SVG carriers. #10933
 adds unresolved reads for same-element `v-for` collection expressions. Two
 existing fixture inputs now contribute comparisons that were previously absent:
 
-| Source below `tests/_fixtures` | SFC span | Template span | Read |
-| --- | --- | --- | --- |
-| `_projects/ecosystem-products/src/NaiveUiOptionsApi.vue` | `2474:2486` | `347:359` | `visibleTasks` |
-| `vue-language-tools/upstream/test-workspace/tsc/#3121/main.vue` | `53:64` | `43:54` | `slotFilters` |
+| Source below `tests/_fixtures`                                  | SFC span    | Template span | Read           |
+| --------------------------------------------------------------- | ----------- | ------------- | -------------- |
+| `_projects/ecosystem-products/src/NaiveUiOptionsApi.vue`        | `2474:2486` | `347:359`     | `visibleTasks` |
+| `vue-language-tools/upstream/test-workspace/tsc/#3121/main.vue` | `53:64`     | `43:54`       | `slotFilters`  |
 
 `slotFilters` is unbound in the upstream fixture's empty script setup. In the
 Naive UI fixture, `visibleTasks` is an Options API computed property. This test
@@ -44,3 +44,15 @@ and permits an Actions job to compare the real before observations against the
 64-entry retained list. This binding-only test needs the committed corpus and
 `--features legacy-differential`; it needs no npm installation, submodule or
 native checker process.
+
+The immutable before producer was independently replayed in
+[run 40494413713, job 122157096840](https://github.com/ubugeeei-prod/vize/actions/runs/40494413713/job/122157096840).
+It checked out `481c94bd55a7276339adc277edd93e30313f6ea9`, copied only the
+retained observer into the test target, and required an empty tracked diff
+for every other file. The native test passed once and all 64 complete
+observations matched this original registry. `baseline-proof` retains the
+complete stdout, stderr, observer-only patch and authenticated receipt; the
+complete source index remains in artifact `12730062824`. A local regression
+replays the captured log and authenticates its bytes before comparing the
+whole original list. The temporary CI capture step was removed after this
+proof was retained; the current-source law continues to run on every change.

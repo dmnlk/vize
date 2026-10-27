@@ -18,6 +18,21 @@ const observed = JSON.parse(
   readFileSync(new URL("reference-transitions/public-instance-10933.json", root), "utf8"),
 );
 
+const complete = JSON.parse(
+  readFileSync(new URL("reference-transitions/public-instance-10933-complete.json", root), "utf8"),
+);
+
+test("all38 captured native packets match the complete explicit transition", () => {
+  assert.equal(complete.sourceReceipt.source, complete.sourceCandidate);
+  assert.equal(complete.sourceReceipt.identity.kind, "native");
+  assert.equal(complete.sourceReceipt.run, String(complete.actionsRun));
+  const captured = JSON.stringify(complete.packets, null, 2) + "\n";
+  assert.equal(Buffer.byteLength(captured), complete.artifactPacketBytes);
+  assert.equal(createHash("sha256").update(captured).digest("hex"), complete.artifactPacketSha256);
+  assert.equal(complete.packets.length, 38);
+  assert.deepEqual(publicInstanceReference(expected), complete.packets);
+});
+
 test("the archived complete packets keep their original authentication", () => {
   assert.equal(
     createHash("sha256").update(JSON.stringify(expected)).digest("hex"),
