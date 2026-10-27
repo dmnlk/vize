@@ -152,6 +152,16 @@ fn check_diagnostics_land_inside_the_projection() {
                     added += 1;
                     additions.push(diagnostic);
                 } else {
+                    eprintln!(
+                        "projection baseline comparison={}",
+                        serde_json::json!({
+                            "path": path.strip_prefix(&root).expect("fixture relative path"),
+                            "diagnostic": diagnostic,
+                            "templateBase": base,
+                            "authoredSpan": [span.start, span.end],
+                            "authoredText": body.get(span.clone()).expect("checked template span"),
+                        })
+                    );
                     compared += 1;
                 }
             } else if divergences.len() < 12 {
